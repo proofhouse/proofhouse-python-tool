@@ -2,6 +2,7 @@ addopts
 AGENTMSG
 buildmeta
 buildstamp
+cocogitto
 EDITMSG
 goreleaser
 ldflags
