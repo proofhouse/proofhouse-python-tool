@@ -1,0 +1,24 @@
+[project]
+name = "proofhouse-python-tool"
+version = "0.0.0"
+description = "Reference CLI for the Proofhouse Python tool reference repository"
+authors = [{ name = "Tony Burns", email = "tony@tonyburns.net" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=15.0.0",
+    "typer>=0.26.7",
+]
+
+[project.scripts]
+proofhouse-python-tool = "proofhouse_python_tool.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.21,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
