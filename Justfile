@@ -136,7 +136,7 @@ fix-markdown *args:
 # `lint` job in .github/workflows/ci.yml invokes a single recipe and
 # stays untouched as new gates land; each new gate appends itself
 # here. A pure dependency list with no logic of its own.
-lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity
+lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode
 
 # Check Python formatting via ruff's formatter in --check mode: report
 # drift and fail without rewriting anything. In a gate meant for CI,
@@ -161,6 +161,14 @@ lint-types:
 # pyproject.toml under [tool.complexipy].
 lint-complexity:
     uv run complexipy
+
+# Find dead code with vulture. Scope lives in pyproject.toml under
+# [tool.vulture], which also scans vulture_allowlist.py — the per-entry
+# documented exemptions for names whose callers vulture cannot see
+# (typer's decorator registration, the console-script entry in
+# pyproject.toml).
+lint-deadcode:
+    uv run vulture
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
