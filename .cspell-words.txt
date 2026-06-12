@@ -35,6 +35,7 @@ sandboxed
 shellcheck
 tbhb
 testpaths
+tmpl
 Tricolon
 worktree
 Worktree
