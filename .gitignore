@@ -13,11 +13,10 @@ tmp/
 COMMIT_AGENTMSG
 src/proofhouse_python_tool/_buildstamp.py
 
-# Vale synced packages (keep vocabulary and project styles).
+# Vale synced packages (keep the vocabulary).
 # Each negation needs the parent un-ignored first — git can't re-include
 # a child whose ancestor directory stays excluded.
 .vale/*
-!.vale/proofhouse/
 !.vale/config/
 .vale/config/*
 !.vale/config/vocabularies/
