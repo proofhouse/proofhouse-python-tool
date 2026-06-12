@@ -8,6 +8,7 @@ commitlint
 complexipy
 cyclop
 deadcode
+depguard
 docstrings
 dunder
 dupl
@@ -16,6 +17,7 @@ gocognit
 golangci
 goreleaser
 hardwrap
+importlinter
 ldflags
 matrixed
 pipefail

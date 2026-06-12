@@ -136,7 +136,7 @@ fix-markdown *args:
 # `lint` job in .github/workflows/ci.yml invokes a single recipe and
 # stays untouched as new gates land; each new gate appends itself
 # here. A pure dependency list with no logic of its own.
-lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code
+lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports
 
 # Check Python formatting via ruff's formatter in --check mode: report
 # drift and fail without rewriting anything. In a gate meant for CI,
@@ -177,6 +177,13 @@ lint-deadcode:
 # config, so this recipe is where the src-plus-tests scope lives.
 lint-dup-code:
     uv run pylint src tests
+
+# Enforce the architecture contracts in pyproject.toml's
+# [tool.importlinter] tables: cli stays above buildmeta, and no
+# production module imports the shipped testing helpers. The bare
+# command is import-linter's own CLI, not this recipe recursing.
+lint-imports:
+    uv run lint-imports
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
