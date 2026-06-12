@@ -145,3 +145,4 @@ typer
 uv
 CPython
 matrixed
+pyrefly

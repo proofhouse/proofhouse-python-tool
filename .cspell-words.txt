@@ -6,7 +6,9 @@ buildstamp
 cocogitto
 commitlint
 docstrings
+dunder
 EDITMSG
+golangci
 goreleaser
 hardwrap
 ldflags

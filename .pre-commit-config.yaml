@@ -96,6 +96,16 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # In the Go config type errors block commits through golangci-lint,
+      # which always runs its typecheck analysis; Python needs a separate
+      # checker to get the same coverage at the same stages.
+      - id: pyrefly
+        name: pyrefly check
+        entry: just lint-types
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check

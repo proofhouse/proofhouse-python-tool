@@ -136,7 +136,7 @@ fix-markdown *args:
 # `lint` job in .github/workflows/ci.yml invokes a single recipe and
 # stays untouched as new gates land; each new gate appends itself
 # here. A pure dependency list with no logic of its own.
-lint-py-all: lint-ruff-format lint-ruff
+lint-py-all: lint-ruff-format lint-ruff lint-types
 
 # Check Python formatting via ruff's formatter in --check mode: report
 # drift and fail without rewriting anything. In a gate meant for CI,
@@ -149,6 +149,12 @@ lint-ruff-format:
 # the justified ignore list live in pyproject.toml under [tool.ruff].
 lint-ruff *args:
     uv run ruff check {{ args }}
+
+# Type check Python code with pyrefly. The [tool.pyrefly] tables in
+# pyproject.toml pin every error kind to "error" and pick the project
+# scope, so a bare project-mode check is the whole gate.
+lint-types:
+    uv run pyrefly check
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
