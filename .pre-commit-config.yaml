@@ -150,6 +150,17 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config enforces the SPDX header at commit time through
+      # golangci-lint's goheader analyzer; reuse is the standalone
+      # counterpart here, and it goes further by demanding a license
+      # declaration for every tracked file, not just sources. No file
+      # filter, because any newly added file can lack one.
+      - id: reuse
+        name: reuse lint
+        entry: just lint-reuse
+        language: system
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check
