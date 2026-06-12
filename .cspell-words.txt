@@ -5,9 +5,12 @@ buildmeta
 buildstamp
 cocogitto
 commitlint
+complexipy
+cyclop
 docstrings
 dunder
 EDITMSG
+gocognit
 golangci
 goreleaser
 hardwrap
