@@ -17,3 +17,10 @@ src/proofhouse_python_tool/_buildstamp.py
 !.vale/config/vocabularies/
 .vale/config/vocabularies/*
 !.vale/config/vocabularies/proofhouse/
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+
+# macOS
+.DS_Store
