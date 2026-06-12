@@ -100,6 +100,12 @@ clean:
 
 # --- Format ---
 
+# Format Python code in place via ruff's formatter. `lint-ruff-format`
+# runs the --check form, so formatting drift fails the gate instead of
+# being rewritten behind the contributor's back.
+format *args:
+    uv run ruff format {{ args }}
+
 # Format Markdown files (whitespace, list markers, code fence styles).
 # Rewrites in place. Pair with `fix-markdown` for semantic lint fixes.
 format-markdown *args:
@@ -111,6 +117,13 @@ format-config *args:
 
 # --- Fix ---
 
+# Fix Python lint findings: apply ruff's auto-fixes for the enabled
+# ruleset, then run the formatter, since an applied fix can leave code
+# shaped in ways the formatter would rewrite.
+fix *args:
+    uv run ruff check --fix {{ args }}
+    uv run ruff format {{ args }}
+
 # Apply rumdl's auto-fixable rules to Markdown files. Complement to
 # `format-markdown` (which only rewrites whitespace and ordering, not
 # semantic lints).
@@ -118,6 +131,24 @@ fix-markdown *args:
     rumdl check --fix {{ if args == "" { "." } else { args } }}
 
 # --- Lint ---
+
+# Aggregator over the Python-flavored lint gates. Carved out so the
+# `lint` job in .github/workflows/ci.yml invokes a single recipe and
+# stays untouched as new gates land; each new gate appends itself
+# here. A pure dependency list with no logic of its own.
+lint-py-all: lint-ruff-format lint-ruff
+
+# Check Python formatting via ruff's formatter in --check mode: report
+# drift and fail without rewriting anything. In a gate meant for CI,
+# drift must fail the run, never rewrite the tree; `format` above is
+# the in-place counterpart.
+lint-ruff-format:
+    uv run ruff format --check
+
+# Lint Python code against the full ruff ruleset. Rule selection and
+# the justified ignore list live in pyproject.toml under [tool.ruff].
+lint-ruff *args:
+    uv run ruff check {{ args }}
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
