@@ -21,10 +21,14 @@ hardwrap
 importlinter
 ldflags
 matrixed
+orbstack
+osxkeychain
 pipefail
 prek
 proofhouse
+rhysd
 rumdl
+sandboxed
 shellcheck
 tbhb
 testpaths
