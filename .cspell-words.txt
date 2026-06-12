@@ -1,10 +1,14 @@
 addopts
 AGENTMSG
+autostash
 buildmeta
 buildstamp
 cocogitto
+commitlint
+docstrings
 EDITMSG
 goreleaser
+hardwrap
 ldflags
 pipefail
 prek
@@ -12,4 +16,8 @@ proofhouse
 rumdl
 tbhb
 testpaths
+Tricolon
+worktree
+Worktree
 worktrees
+yamllintignore
