@@ -1,0 +1,12 @@
+addopts
+AGENTMSG
+buildmeta
+buildstamp
+EDITMSG
+goreleaser
+ldflags
+pipefail
+prek
+proofhouse
+testpaths
+worktrees
