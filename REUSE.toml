@@ -1,0 +1,63 @@
+# Bulk SPDX declarations for the files that cannot or should not
+# carry the inline two-line header the Python sources use. reuse lint
+# refuses to pass until every tracked file states its copyright and
+# license, and this file is where the non-Python remainder does so.
+version = 1
+
+# Root-level configuration. A few of these formats do accept comments,
+# but others do not (.python-version is read verbatim by version
+# managers, plain JSON has no comment syntax), and the Justfile only
+# looks licensed today because its stamp recipe embeds the header text
+# inside a heredoc. Declaring the whole group here keeps coverage
+# independent of each format's comment syntax.
+[[annotations]]
+path = [
+    ".cspell-words.txt",
+    ".cspell.jsonc",
+    ".editorconfig",
+    ".gitattributes",
+    ".gitignore",
+    ".pre-commit-config.yaml",
+    ".python-version",
+    ".rumdl.toml",
+    ".vale.ini",
+    ".yamllint.yaml",
+    ".yamllintignore",
+    "biome.json",
+    "Brewfile",
+    "cog.toml",
+    "Justfile",
+    "pyproject.toml",
+]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"
+
+# uv owns this file and rewrites it wholesale on every resolution, so
+# an inline header would vanish at the next `uv lock`.
+[[annotations]]
+path = ["uv.lock"]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Workflows, CODEOWNERS, and the actionlint and Renovate configs.
+# Globbed by directory so the next workflow file is covered when it
+# lands rather than tripping the gate until someone lists it.
+[[annotations]]
+path = [".github/**"]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"
+
+# This project's own vale rules and vocabulary. The synced upstream
+# style packages stay gitignored, so the glob never claims third-party
+# material.
+[[annotations]]
+path = [".vale/**"]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"
+
+# Contributor and agent documentation, including the rules directory
+# the agent harness reads.
+[[annotations]]
+path = ["AGENTS.md", "CLAUDE.md", ".claude/**"]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"

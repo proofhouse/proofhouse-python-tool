@@ -136,7 +136,7 @@ fix-markdown *args:
 # `lint` job in .github/workflows/ci.yml invokes a single recipe and
 # stays untouched as new gates land; each new gate appends itself
 # here. A pure dependency list with no logic of its own.
-lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports
+lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports lint-reuse
 
 # Check Python formatting via ruff's formatter in --check mode: report
 # drift and fail without rewriting anything. In a gate meant for CI,
@@ -184,6 +184,15 @@ lint-dup-code:
 # command is import-linter's own CLI, not this recipe recursing.
 lint-imports:
     uv run lint-imports
+
+# Verify SPDX compliance with reuse: every tracked file must declare
+# copyright and license, either through the inline two-line header on
+# Python sources or through a bulk annotation in REUSE.toml. The flag
+# skips reuse's per-file process pool — on a tree this size the pool
+# costs more to spawn than it saves, and the serial path also works
+# in restricted environments that forbid the semaphores a pool needs.
+lint-reuse:
+    uv run reuse --no-multiprocessing lint
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated

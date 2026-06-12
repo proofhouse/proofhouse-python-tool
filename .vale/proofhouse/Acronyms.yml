@@ -83,3 +83,7 @@ exceptions:
   - DCO
   - GHSA
   - MAL
+  # The REUSE specification gives its name to REUSE.toml and the
+  # LICENSES/ layout; the all-caps form has no spelled-out expansion
+  # to offer.
+  - REUSE
