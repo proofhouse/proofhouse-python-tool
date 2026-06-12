@@ -150,3 +150,8 @@ complexipy
 cyclomatic
 pylint
 [Dd]ocstrings?
+APM|apm
+apm_modules
+lockfile[s]?
+org's
+yamllint

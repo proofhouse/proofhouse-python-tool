@@ -25,3 +25,6 @@ src/proofhouse_python_tool/_buildstamp.py
 
 # macOS
 .DS_Store
+
+# APM dependencies
+apm_modules/
