@@ -82,6 +82,20 @@ repos:
         types: [text]
         files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?|json5|css|svelte|vue|astro|graphql|gql)$"
 
+      - id: ruff-format
+        name: ruff format
+        entry: just format
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check
+        entry: just lint-ruff
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check
