@@ -44,7 +44,29 @@ stamp:
 
 # Build the sdist and wheel
 build: stamp
-    uv build
+    SOURCE_DATE_EPOCH={{ source_date_epoch }} uv build
+
+# Check that builds are reproducible: build the sdist and wheel twice
+# into separate temp dirs, compare sha256 digests, and fail on any
+# mismatch. uv_build normalizes archive metadata and the stamp module
+# is a pure function of the checked-out commit, so two builds of the
+# same commit must hash identically.
+[script]
+build-repro-check: stamp
+    out_a=$(mktemp -d)
+    out_b=$(mktemp -d)
+    trap 'rm -rf "$out_a" "$out_b"' EXIT
+    SOURCE_DATE_EPOCH={{ source_date_epoch }} uv build --out-dir "$out_a"
+    SOURCE_DATE_EPOCH={{ source_date_epoch }} uv build --out-dir "$out_b"
+    for artifact in "$out_a"/*; do
+        name=$(basename "$artifact")
+        sum_a=$(shasum -a 256 < "$artifact")
+        sum_b=$(shasum -a 256 < "$out_b/$name")
+        if [[ "$sum_a" != "$sum_b" ]]; then
+            echo "build not reproducible: $name differs between runs" >&2
+            exit 1
+        fi
+    done
 
 # Install the tool into uv's managed tool environment
 install: stamp
