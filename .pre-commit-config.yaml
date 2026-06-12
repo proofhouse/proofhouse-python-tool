@@ -139,6 +139,17 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config polices import boundaries at commit time through
+      # golangci-lint's depguard analyzer; import-linter is the
+      # standalone counterpart here, so a dedicated hook runs it at the
+      # same stages.
+      - id: import-linter
+        name: import-linter contracts check
+        entry: just lint-imports
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check
