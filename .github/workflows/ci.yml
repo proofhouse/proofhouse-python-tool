@@ -118,8 +118,17 @@ jobs:
       - name: Install Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
+      # Sync only the test group: the lint tools never run in this
+      # job, and complexipy has no free-threaded wheels, so a full
+      # dev-group sync would build it from source on the 3.14t slots
+      # (and fail to link on Windows).
       - name: Sync dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --no-default-groups --group test
 
+      # UV_NO_SYNC keeps the `uv run` inside `just test` from
+      # re-syncing the default dev group over the test-only
+      # environment prepared above.
       - name: Run tests
+        env:
+          UV_NO_SYNC: "1"
         run: just test

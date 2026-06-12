@@ -146,3 +146,5 @@ uv
 CPython
 matrixed
 pyrefly
+complexipy
+cyclomatic

@@ -18,13 +18,32 @@ proofhouse-python-tool = "proofhouse_python_tool.cli:main"
 requires = ["uv_build>=0.11.21,<0.12.0"]
 build-backend = "uv_build"
 
+# The test group stands alone so the CI test matrix can sync it
+# without the lint tools. complexipy publishes no free-threaded
+# wheels, and its sdist fails to link against the 3.14t interpreter
+# on Windows; lint tooling never runs in the test matrix, so those
+# slots should not have to install (or build) it.
 [dependency-groups]
 dev = [
+    { include-group = "test" },
+    "complexipy>=5.5.0",
     "pyrefly>=1.0.0",
-    "pytest>=9.0.3",
-    "pytest-mock>=3.15.1",
     "ruff>=0.15.17",
 ]
+test = [
+    "pytest>=9.0.3",
+    "pytest-mock>=3.15.1",
+]
+
+[tool.complexipy]
+# Scope lives here rather than in the Justfile recipe so editor and
+# pre-commit invocations of a bare `complexipy` measure the same tree
+# the CI gate does.
+paths = ["src", "tests"]
+# Sonar's default cognitive complexity ceiling; complexipy ships the
+# same default, but an unpinned threshold would let an upstream
+# default change move the gate without a visible diff here.
+max-complexity-allowed = 15
 
 [tool.pyrefly]
 project-includes = ["src", "tests"]

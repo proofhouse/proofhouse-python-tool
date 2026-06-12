@@ -106,6 +106,16 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config gets its cognitive complexity ceiling at commit
+      # time from golangci-lint's gocognit analyzer; complexipy is a
+      # standalone tool, so a dedicated hook runs it at the same stages.
+      - id: complexipy
+        name: complexipy check
+        entry: just lint-complexity
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check
