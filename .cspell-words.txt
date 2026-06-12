@@ -8,5 +8,6 @@ ldflags
 pipefail
 prek
 proofhouse
+rumdl
 testpaths
 worktrees
