@@ -17,3 +17,7 @@ The prek commit-msg hook on `.git/COMMIT_EDITMSG` stays the real gate. `COMMIT_A
 ## Coverage pragmas
 
 The branch-coverage gate sits at 100%. A missing branch means a missing test, never a `# pragma: no cover`. Reach for an inline pragma only when a line truly can't run under test and the standing `exclude_also` patterns in `pyproject.toml` don't already cover it. Such a pragma always carries an adjacent comment naming why the line stays unreachable. Reviewers reject a bare `# pragma: no cover` with no such defense, the same way they reject an undocumented lint ignore.
+
+## Prose lint output
+
+When fixing vale findings, run `vale --output=proofhouse-agent.tmpl <paths>` instead of the default output. The template, synced from the proofhouse style package, prints one self-contained line per finding (location, severity, rule, the exact matched text, and the replacement parameter when the rule defines one) plus a totals line, so you can apply fixes without re-reading context through separate commands. Empty output means a clean run, and the exit code carries the result.
