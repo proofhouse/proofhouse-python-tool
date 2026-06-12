@@ -158,3 +158,8 @@ grimp
 mutscope
 pull_request
 [Dd]ocstrings?
+APM|apm
+apm_modules
+lockfile[s]?
+org's
+yamllint
