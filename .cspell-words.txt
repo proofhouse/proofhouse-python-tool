@@ -10,6 +10,7 @@ cyclop
 deadcode
 docstrings
 dunder
+dupl
 EDITMSG
 gocognit
 golangci
