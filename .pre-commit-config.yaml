@@ -128,6 +128,17 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config catches copy-pasted code at commit time through
+      # golangci-lint's dupl analyzer; pylint's similarities checker is
+      # the standalone counterpart here, so a dedicated hook runs it at
+      # the same stages.
+      - id: pylint-dup-code
+        name: pylint duplicate-code check
+        entry: just lint-dup-code
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check

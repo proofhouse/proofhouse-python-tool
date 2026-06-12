@@ -148,3 +148,5 @@ matrixed
 pyrefly
 complexipy
 cyclomatic
+pylint
+[Dd]ocstrings?

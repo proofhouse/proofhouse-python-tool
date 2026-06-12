@@ -136,7 +136,7 @@ fix-markdown *args:
 # `lint` job in .github/workflows/ci.yml invokes a single recipe and
 # stays untouched as new gates land; each new gate appends itself
 # here. A pure dependency list with no logic of its own.
-lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode
+lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code
 
 # Check Python formatting via ruff's formatter in --check mode: report
 # drift and fail without rewriting anything. In a gate meant for CI,
@@ -169,6 +169,14 @@ lint-complexity:
 # pyproject.toml).
 lint-deadcode:
     uv run vulture
+
+# Detect copy-pasted code with pylint, pared down in pyproject.toml's
+# [tool.pylint] tables to its similarities checker alone — the one
+# message in pylint's catalog no other tool in the chain covers.
+# pylint takes its scan roots on the command line rather than from
+# config, so this recipe is where the src-plus-tests scope lives.
+lint-dup-code:
+    uv run pylint src tests
 
 # Lint prose in Markdown files and source comments via vale. Glob
 # excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
