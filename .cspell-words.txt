@@ -10,5 +10,6 @@ pipefail
 prek
 proofhouse
 rumdl
+tbhb
 testpaths
 worktrees
