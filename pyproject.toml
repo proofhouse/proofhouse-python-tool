@@ -22,3 +22,7 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.0.3",
 ]
+
+[tool.pytest]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]

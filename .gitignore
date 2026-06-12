@@ -5,3 +5,4 @@ dist/
 .pytest_cache/
 tmp/
 COMMIT_AGENTMSG
+src/proofhouse_python_tool/_buildstamp.py
