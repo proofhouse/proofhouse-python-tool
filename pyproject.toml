@@ -29,6 +29,7 @@ dev = [
     "complexipy>=5.5.0",
     "pyrefly>=1.0.0",
     "ruff>=0.15.17",
+    "vulture>=2.16",
 ]
 test = [
     "pytest>=9.0.3",
@@ -219,6 +220,21 @@ max-complexity = 15
 # values read better in tests than named constants. INP001: test dirs
 # are intentionally __init__-free under pytest's importlib mode.
 "tests/**" = ["S101", "PLR2004", "INP001"]
+# The vulture allowlist is data for vulture, never imported: a bare
+# name there is the mechanism that marks a definition as used, so the
+# useless-expression (B018) and undefined-name (F821) findings describe
+# exactly the file's intended shape.
+"vulture_allowlist.py" = ["B018", "F821"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.vulture]
+# Scope lives here rather than in the Justfile recipe so editor and
+# pre-commit invocations of a bare `vulture` scan the same tree the CI
+# gate does. The allowlist rides along as a scanned path: a name
+# referenced there counts as used, which exempts exactly the listed
+# definitions while everything else stays at vulture's full strictness.
+# Each entry documents why its caller sits outside vulture's static
+# view; no confidence threshold is lowered.
+paths = ["src", "tests", "vulture_allowlist.py"]

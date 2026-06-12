@@ -116,6 +116,18 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config catches in-package dead code at commit time
+      # through golangci-lint's `unused` analyzer (the whole-program
+      # deadcode reachability scan stays outside its hooks); vulture
+      # is a standalone tool, so a dedicated hook runs it at the same
+      # stages.
+      - id: vulture
+        name: vulture check
+        entry: just lint-deadcode
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: lock-check
         name: uv.lock drift check
         entry: uv lock --check

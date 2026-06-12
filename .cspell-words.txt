@@ -7,6 +7,7 @@ cocogitto
 commitlint
 complexipy
 cyclop
+deadcode
 docstrings
 dunder
 EDITMSG
