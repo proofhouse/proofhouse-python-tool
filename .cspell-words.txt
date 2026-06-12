@@ -15,6 +15,7 @@ pipefail
 prek
 proofhouse
 rumdl
+shellcheck
 tbhb
 testpaths
 Tricolon
