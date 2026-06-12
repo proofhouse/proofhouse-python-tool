@@ -33,5 +33,5 @@ def version() -> None:
 
 
 def main() -> None:
-    """Run the app; the console-script entry point targets this function."""
+    """Run the app. The console-script entry point targets this function."""
     app()

@@ -12,8 +12,8 @@ from proofhouse_python_tool import buildmeta, cli
 
 _runner = CliRunner()
 
-# Three lines, prefixes aligned as in the Go twin; the commit field may be
-# empty on an unstamped source checkout.
+# Three lines, prefixes aligned as in the Go twin; the commit field may
+# remain empty on an unstamped source checkout.
 _VERSION_SHAPE = re.compile(
     r"proofhouse-python-tool [^\n]+\n"
     r"commit: [^\n]*\n"
