@@ -151,4 +151,5 @@ pyrefly
 complexipy
 cyclomatic
 pylint
+xdist
 [Dd]ocstrings?

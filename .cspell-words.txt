@@ -39,4 +39,5 @@ Tricolon
 worktree
 Worktree
 worktrees
+xdist
 yamllintignore
