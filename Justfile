@@ -450,6 +450,38 @@ mutate-all:
     uv run cr-report --surviving-only "$session"
     uv run cr-rate "$session"
 
+# Mutate only what a branch could have broken, and block on any survivor.
+# tools/mutscope.py diffs [base] against HEAD, keeps the changed first-party
+# modules, follows the import graph to the modules that depend on them, and
+# writes a config narrowed to that set; cosmic-ray then mutates just those
+# files. Unlike mutate-all this one carries a threshold: every targeted mutant
+# has to die. A full-tree 100% kill would be too slow and too flaky to sit on
+# every pull request, but the diff set is small enough that demanding zero
+# survivors is both fast and stable. The check counts survivors out of the
+# session rather than reading `cr-rate --fail-over 0`, whose guard treats a
+# threshold of 0 as falsy and so never fires; counting is exact regardless of
+# how a fractional rate rounds. An empty diff leaves the scope empty, cosmic-ray
+# enumerates no mutants, and the count is zero — the no-op a docs-only or
+# test-only branch wants. Equivalent mutants accepted in the full sweep stay
+# excluded through cosmic-ray.toml, which mutscope copies forward verbatim.
+[script]
+mutate-diff base="origin/main":
+    mkdir -p .cosmic-ray
+    cfg=.cosmic-ray/diff.toml
+    session=.cosmic-ray/diff.sqlite
+    uv run python tools/mutscope.py "$cfg" "{{ base }}"
+    sed -i.bak -e 's|^timeout = .*|timeout = {{ mutation_timeout }}|' "$cfg"
+    rm -f "$cfg.bak" "$session"
+    uv run cosmic-ray init "$cfg" "$session"
+    uv run cosmic-ray exec "$cfg" "$session"
+    uv run cr-report --surviving-only "$session"
+    uv run cr-rate "$session"
+    survivors=$(uv run cosmic-ray dump "$session" | uv run python tools/mutscope.py --count-survivors)
+    if [[ "$survivors" -ne 0 ]]; then
+        echo "mutate-diff: $survivors mutant(s) survived on the changed surface" >&2
+        exit 1
+    fi
+
 # --- Security ---
 
 # Hunt the working tree and every historical commit for leaked

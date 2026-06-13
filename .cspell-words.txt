@@ -20,11 +20,13 @@ goheader
 golangci
 goreleaser
 gosec
+grimp
 hardwrap
 htmlcov
 importlinter
 ldflags
 matrixed
+mutscope
 orbstack
 osxkeychain
 pipefail

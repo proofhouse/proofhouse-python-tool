@@ -94,6 +94,7 @@ lookup[s]?
 [Rr]eachability
 customManager
 [Gg]it
+HEAD
 sed
 EOF
 GNU
@@ -112,6 +113,7 @@ passthrough
 [Tt]odos?
 PII
 [Pp]ragmas?
+noqa
 subshells?
 heredocs?
 nonbreaking
@@ -152,4 +154,7 @@ complexipy
 cyclomatic
 pylint
 xdist
+grimp
+mutscope
+pull_request
 [Dd]ocstrings?
