@@ -408,13 +408,33 @@ cover-slot slot="local":
 gitleaks:
     gitleaks git --verbose .
 
+# Audit the locked dependency closure for known vulnerabilities. The
+# scan runs against an exported PEP 751 lockfile rather than the live
+# .venv: `uv export` resolves uv.lock into pylock.toml, so pip-audit
+# sees the exact versions a `uv sync --frozen` would install — every
+# transitive package, not only the direct typer/rich/dev entries — and
+# the gate tracks the committed lock instead of whatever happens to be
+# installed. pip-audit's --locked reads pylock.toml natively (2.9+),
+# queries each pinned version against the PyPI advisory database, and
+# exits nonzero on any match. --no-emit-project drops the unversioned
+# workspace package, which pip-audit would otherwise skip with a note.
+# The export and the PyPI HTTP cache both land in a throwaway dir the
+# trap removes on exit, so the run stays hermetic and never leans on a
+# writable per-user cache location.
+[script]
+audit:
+    work=$(mktemp -d)
+    trap 'rm -rf "$work"' EXIT
+    uv export --quiet --format pylock.toml --no-emit-project -o "$work/pylock.toml"
+    uv run pip-audit --cache-dir "$work/cache" --locked "$work"
+
 # Roll the security scanners into one entry point a contributor can
-# run before pushing. It holds only gitleaks today and gains the
-# dependency-audit and SAST gates as those land, which keeps the
-# scanner set named in one recipe rather than scattered across the
-# Justfile. A bare dependency list, so a failure points straight at
-# the scanner that fired.
-security: gitleaks
+# run before pushing. gitleaks sweeps history for secrets and audit
+# checks the locked dependencies for advisories; bandit joins once the
+# SAST gate lands. Naming the set here means the CI security job and a
+# local pre-push run reach for the same target. A flat dependency list
+# keeps any failure attributable to the scanner that raised it.
+security: gitleaks audit
 
 # --- Dependencies ---
 

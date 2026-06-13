@@ -29,6 +29,7 @@ osxkeychain
 pipefail
 prek
 proofhouse
+pylock
 rhysd
 rumdl
 sandboxed
