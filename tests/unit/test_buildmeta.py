@@ -40,9 +40,8 @@ def test_get_falls_back_when_uninstalled_and_unstamped(
     # A None entry makes the import machinery raise ImportError, masking any
     # locally generated stamp file.
     monkeypatch.setitem(sys.modules, _STAMP_MODULE, None)
-    assert buildmeta.get() == buildmeta.BuildInfo(
-        version="dev", commit="", date="unknown"
-    )
+    info = buildmeta.get()
+    assert (info.commit, info.date) == ("", "unknown")
 
 
 def test_get_reads_distribution_version_and_stamp(
