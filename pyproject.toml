@@ -27,6 +27,7 @@ build-backend = "uv_build"
 dev = [
     { include-group = "test" },
     "complexipy>=5.5.0",
+    "diff-cover>=10.3.0",
     "import-linter>=2.11",
     "pylint>=4.0.5",
     "pyrefly>=1.0.0",
@@ -34,8 +35,13 @@ dev = [
     "ruff>=0.15.17",
     "vulture>=2.16",
 ]
+# pytest-cov rides in the test group, not dev: the CI test matrix syncs
+# only this group, and every slot runs `just cover-slot` to capture its
+# own coverage data. diff-cover stays in dev — it runs solely in the
+# downstream coverage job, never on the per-slot path.
 test = [
     "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
 ]
 
@@ -223,6 +229,42 @@ untyped-import = "error"
 unused-coroutine = "error"
 unused-ignore = "error"
 variance-mismatch = "error"
+
+[tool.coverage.run]
+# Measure branch coverage, not just line coverage: a 100% line score
+# can still leave one side of a conditional never taken, which is the
+# exact failure mode the fallback paths in buildmeta would hide.
+branch = true
+# Coverage instruments the shipped package, never the tests. A test
+# file with no assertion would otherwise count itself as covered; the
+# mutation and property gates that arrive later are what prove the
+# tests actually pin behavior.
+source = ["src"]
+# Store paths relative to the project root so the per-slot data files
+# the CI matrix produces combine cleanly across operating systems —
+# an absolute Windows path and an absolute Linux path for the same
+# module would otherwise refuse to merge.
+relative_files = true
+
+[tool.coverage.report]
+# The whole point of this gate: nothing in the package ships without a
+# branch reaching it. Anything genuinely unreachable belongs in
+# exclude_also below with a reason, not behind a lowered threshold.
+fail_under = 100
+show_missing = true
+# Lines coverage should not count against the score. Each pattern
+# carries the reason it can never execute under test.
+exclude_also = [
+    # Bodies guarded by TYPE_CHECKING run only under a type checker,
+    # never at runtime.
+    "if TYPE_CHECKING:",
+    # assert_never marks a match arm the type checker has proven
+    # unreachable; reaching it at runtime is a bug, not a tested path.
+    "assert_never\\(",
+    # The module-level entry guard fires only when a file runs as a
+    # script, which the test suite never does.
+    "if __name__ == \"__main__\":",
+]
 
 [tool.pytest]
 addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
