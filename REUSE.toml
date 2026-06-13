@@ -26,6 +26,7 @@ path = [
     "biome.json",
     "Brewfile",
     "cog.toml",
+    "cosmic-ray.toml",
     "Justfile",
     "pyproject.toml",
 ]

@@ -392,6 +392,64 @@ cover-slot slot="local":
     uv run pytest --cov --cov-branch --cov-fail-under=0 -n auto
     uv run coverage xml -o coverage.xml
 
+# --- Mutation ---
+
+# Per-mutant test budget in seconds. cosmic-ray gates each mutated run at
+# this wall-clock ceiling and files anything slower as incompetent rather
+# than survived, so the figure has to clear the suite's runtime with
+# margin. The config file carries the same default; the recipes below
+# rewrite it from this variable, which a loaded CI runner or a slow laptop
+# raises by exporting MUTATION_TIMEOUT. It is an absolute timeout, not
+# gremlins' multiply-the-baseline coefficient — cosmic-ray takes seconds.
+mutation_timeout := env("MUTATION_TIMEOUT", "30.0")
+
+# Mutate one path for fast iteration. cosmic-ray rewrites each expression
+# under [path] in turn, reruns the suite, and labels the mutant KILLED
+# (a test caught it), SURVIVED (the suite passed regardless), or
+# incompetent (the change broke import or timed out). SURVIVED mutants are
+# the assertion gaps line coverage cannot see. This is the inner-loop
+# form: pass a single module to scope the run, the way the full sweep
+# below scopes nothing. It derives a throwaway config from cosmic-ray.toml
+# with the path and the timeout swapped in, then drops the surviving-only
+# report and the survival rate. mutate-all powers the nightly; this one
+# stays at the developer's elbow.
+[script]
+mutate path="src/proofhouse_python_tool":
+    mkdir -p .cosmic-ray
+    cfg=.cosmic-ray/scoped.toml
+    session=.cosmic-ray/scoped.sqlite
+    sed -e 's|^module-path = .*|module-path = "{{ path }}"|' \
+        -e 's|^timeout = .*|timeout = {{ mutation_timeout }}|' \
+        cosmic-ray.toml > "$cfg"
+    rm -f "$session"
+    uv run cosmic-ray init "$cfg" "$session"
+    uv run cosmic-ray exec "$cfg" "$session"
+    uv run cr-report --surviving-only "$session"
+    uv run cr-rate "$session"
+
+# Mutate the whole first-party package. This is the nightly form, factored
+# out so the scheduled workflow under .github/workflows/ has one recipe to
+# call and a contributor can run the identical sweep before a release-bound
+# change — the single-source-of-truth split the fuzz and fuzz-nightly pair
+# also follow. The module-path and exclusions come straight from
+# cosmic-ray.toml; only the timeout gets the MUTATION_TIMEOUT treatment.
+# No threshold lives here: the sweep reports survivors and exits zero
+# whatever the score, leaving the blocking score check to the diff-scoped
+# PR gate. A reader scans the surviving-only block for the assertion gaps
+# to close.
+[script]
+mutate-all:
+    mkdir -p .cosmic-ray
+    cfg=.cosmic-ray/all.toml
+    session=.cosmic-ray/all.sqlite
+    sed -e 's|^timeout = .*|timeout = {{ mutation_timeout }}|' \
+        cosmic-ray.toml > "$cfg"
+    rm -f "$session"
+    uv run cosmic-ray init "$cfg" "$session"
+    uv run cosmic-ray exec "$cfg" "$session"
+    uv run cr-report --surviving-only "$session"
+    uv run cr-rate "$session"
+
 # --- Security ---
 
 # Hunt the working tree and every historical commit for leaked

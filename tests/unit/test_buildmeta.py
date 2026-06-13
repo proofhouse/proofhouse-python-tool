@@ -3,6 +3,7 @@
 
 """Tests for the buildmeta fallback and stamped paths."""
 
+import dataclasses
 import sys
 from importlib import metadata
 from types import ModuleType
@@ -54,3 +55,12 @@ def test_get_reads_distribution_version_and_stamp(
     assert buildmeta.get() == buildmeta.BuildInfo(
         version="1.2.3", commit="abc1234", date="2026-06-11"
     )
+
+
+def test_build_info_is_immutable() -> None:
+    # The stamp is read once and rendered as-is. A writable BuildInfo would
+    # let a caller silently rewrite the reported build, so the frozen flag
+    # is part of the contract, not an incidental default.
+    info = buildmeta.BuildInfo(version="1.2.3", commit="abc1234", date="2026-06-11")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        info.version = "9.9.9"  # type: ignore[misc]
