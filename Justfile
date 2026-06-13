@@ -484,54 +484,24 @@ mutate-diff base="origin/main":
 
 # --- Fuzzing ---
 
-# Wall-clock budget for one fuzz pass, in seconds. `hypothesis fuzz` has
-# no built-in stop condition — it searches until interrupted — so the
-# recipe imposes the bound itself and the figure lives here. The inner
-# loop wants a short pass that finishes before a coffee refill; the
-# nightly workflow exports a far larger FUZZ_TIME to let coverage-guided
-# search reach inputs a 30-second probe never will. Unlike the mutation
-# timeout this caps the whole run, not a single trial.
-fuzz_time := env("FUZZ_TIME", "30")
-
-# Drive the hypothesis property tests under HypoFuzz's coverage-guided
-# search. HypoFuzz hooks pytest collection, fuzzes every @given test it
-# finds under tests/property, and writes anything that fails — and the
-# inputs that reach new branches — into the shared .hypothesis database.
-# Two things make this recipe its own shape rather than a thin wrapper:
-# the fuzzer never returns on its own, and a killed fuzzer's exit status
-# says nothing about whether it found a bug. So the recipe runs the
-# search for fuzz_time seconds with the dashboard off (a CI runner has no
-# browser to serve it to), tears the workers down with an interrupt, then
-# replays the suite through plain pytest. Replay is where the verdict
-# comes from: a counterexample HypoFuzz banked in the database resurfaces
-# as an ordinary Hypothesis failure, so a clean replay means the budget
-# turned up nothing and a red one carries the exact crashing input. The
-# nightly sweep calls this same recipe with a wider budget — one entry
-# point for the elbow loop and the schedule alike, the split the
-# mutate / mutate-all pair already uses.
-[script]
+# Put the property tests under HypoFuzz, whose coverage-guided loop hooks
+# pytest collection and keeps mutating inputs toward the buildmeta branches
+# a fixed sample never reaches, banking any falsifier into the shared
+# .hypothesis database. tools/fuzz.py drives it because the search resists a
+# plain wrapper: it never returns on its own, and a killed worker pool's
+# exit code says nothing about whether a bug turned up. So the helper caps
+# the run at FUZZ_TIME — bare seconds or a 30s/5m/1h duration, the dial the
+# Go twin's fuzz recipe also reads, short by default for the edit loop and
+# wide from the nightly — interrupts the search, and then replays the suite
+# under pytest. That replay is the verdict: a banked counterexample comes
+# back as a Hypothesis failure, so green means the budget found nothing and
+# red carries the offending input. The scheduled sweep invokes this same
+# recipe at a larger budget, one definition for both callers the way the
+# mutate / mutate-all pair already splits. Keeping the budget clock and the
+# replay in a typed helper holds them to the repo's lint and type gates,
+# which an inline shell block sidesteps.
 fuzz:
-    # Enable job control so the backgrounded fuzzer leads its own process
-    # group: hypothesis fuzz forks a pool of workers, and signaling the
-    # group by negative pid reaches them all. Interrupting only the parent
-    # leaves the workers orphaned and the wait hanging.
-    set -m
-    uv run hypothesis fuzz --no-dashboard -- tests/property &
-    fuzzer=$!
-    trap 'kill -KILL -- "-$fuzzer" 2>/dev/null || true' EXIT
-    remaining={{ fuzz_time }}
-    while [[ "$remaining" -gt 0 ]] && kill -0 "$fuzzer" 2>/dev/null; do
-        sleep 1
-        remaining=$((remaining - 1))
-    done
-    # Ask the group to wind down, give it a moment, then end any straggler.
-    kill -INT -- "-$fuzzer" 2>/dev/null || true
-    sleep 2
-    kill -KILL -- "-$fuzzer" 2>/dev/null || true
-    wait "$fuzzer" 2>/dev/null || true
-    trap - EXIT
-    echo "replaying tests/property to surface any banked counterexample"
-    uv run pytest tests/property
+    uv run python tools/fuzz.py
 
 # --- Security ---
 
