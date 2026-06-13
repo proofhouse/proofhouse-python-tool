@@ -34,6 +34,7 @@ pylock
 rhysd
 rumdl
 sandboxed
+SARIF
 shellcheck
 tbhb
 testpaths
