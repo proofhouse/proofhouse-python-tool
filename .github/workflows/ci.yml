@@ -104,8 +104,13 @@ jobs:
     # uv picks its interpreter from UV_PYTHON, so a job-level env
     # points `uv sync` and the `uv run` calls inside just recipes at
     # the matrix slot's interpreter without any recipe changes.
+    # HYPOTHESIS_PROFILE selects the ci profile registered in
+    # tests/property/conftest.py: 500 examples per property and no
+    # per-example deadline, the wider search a CI run can afford where
+    # the local default stays at 50 for fast feedback.
     env:
       UV_PYTHON: ${{ matrix.python }}
+      HYPOTHESIS_PROFILE: ci
     steps:
       - name: Harden the runner
         if: runner.os == 'Linux'
@@ -133,6 +138,20 @@ jobs:
       # (and fail to link on Windows).
       - name: Sync dependencies
         run: uv sync --frozen --no-default-groups --group test
+
+      # Carry hypothesis's example database across runs so a failing
+      # input one run discovers replays as a regression on the next,
+      # rather than vanishing with the runner. The key is per-slot and
+      # rolls on every commit; the restore-keys prefix means a new
+      # commit still seeds from the slot's previous database instead of
+      # starting empty.
+      - name: Cache hypothesis examples
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .hypothesis/examples
+          key: hypothesis-${{ matrix.os }}-${{ matrix.python }}-${{ github.sha }}
+          restore-keys: |
+            hypothesis-${{ matrix.os }}-${{ matrix.python }}-
 
       # UV_NO_SYNC keeps the `uv run` inside the just recipes from
       # re-syncing the default dev group over the test-only environment
