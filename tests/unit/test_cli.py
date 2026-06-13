@@ -49,6 +49,16 @@ def test_bare_invocation_shows_help() -> None:
     assert "version" in result.output
 
 
+def test_help_omits_shell_completion_options() -> None:
+    # The app turns completion off, so typer never grafts its pair of
+    # shell-completion install and show options onto the surface. The
+    # tool's contract is the lone version command; that plumbing is surface
+    # the release pipeline has no reason to carry.
+    result = testing.invoke(["--help"])
+    assert result.exit_code == 0
+    assert "completion" not in result.output.lower()
+
+
 def test_main_runs_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     # The console-script entry point runs through main(), which hands the
     # typer app the process argv. The in-process CliRunner the other tests

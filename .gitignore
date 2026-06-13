@@ -10,6 +10,9 @@ dist/
 coverage.xml
 htmlcov/
 tmp/
+# cosmic-ray mutation session databases. The `mutate` recipes write the
+# work order plus per-mutant results here; it is regenerated each run.
+.cosmic-ray/
 COMMIT_AGENTMSG
 src/proofhouse_python_tool/_buildstamp.py
 

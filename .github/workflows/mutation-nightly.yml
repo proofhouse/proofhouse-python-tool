@@ -1,0 +1,71 @@
+---
+# Nightly mutation sweep. cosmic-ray rewrites each expression in the
+# first-party package, reruns the suite per mutant, and records which
+# mutants the tests kill versus which slip through. That per-mutant
+# rerun is far too slow to sit on a pull request, so the full sweep
+# lands here on a schedule; the bounded, diff-scoped score check is the
+# gate that runs per PR. The job calls the same `just mutate-all` a
+# contributor runs locally, overriding only MUTATION_TIMEOUT, so the
+# recipe and cosmic-ray.toml stay the one description of what gets
+# mutated.
+#
+# The recipe exits zero at any survival rate, so the surviving-only
+# report lands in the run log rather than reddening the run. A reader
+# scans the SURVIVED lines for the assertions that line coverage missed.
+
+name: mutation-nightly
+
+on:
+  schedule:
+    # 04:26 UTC nightly. Off-peak and off the top of the hour, on its own
+    # minute clear of the security audit (09:19) and the weekly CodeQL
+    # slot (04:43 Sundays) so the sweeps never queue against each other.
+    - cron: "26 4 * * *"
+  workflow_dispatch:
+    inputs:
+      mutation_timeout:
+        description: "Per-mutant test budget in seconds (cosmic-ray timeout)"
+        type: string
+        default: "30.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize scheduled and manual runs so an on-demand dispatch never
+  # races a nightly run. Never cancel a run in flight: a half-finished
+  # sweep is wasted compute.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  mutate:
+    name: mutate
+    runs-on: ubuntu-24.04
+    # cosmic-ray reruns the whole suite once per mutant, so the ceiling
+    # scales with the mutant count times suite runtime. The current set
+    # finishes in seconds; keep the budget generous and revisit as the
+    # package grows.
+    timeout-minutes: 60
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up just
+        uses: proofhouse/github-actions/.github/actions/setup-just@c55eeb3115d95f6b8777538b4d6f49d48830e199 # v0.2.0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Run mutation sweep
+        env:
+          # Scheduled runs carry no inputs, so fall back to the dispatch default.
+          MUTATION_TIMEOUT: ${{ github.event.inputs.mutation_timeout || '30.0' }}
+        run: just mutate-all
