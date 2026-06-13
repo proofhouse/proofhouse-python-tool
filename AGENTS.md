@@ -13,3 +13,7 @@ Draft every commit message in `COMMIT_AGENTMSG` at the repo root before you run 
 `just lint-commit-msg` mirrors the commit-msg hook: vale under the commit scope (which catches AI commit tells via `ai-tells-commits`), cspell with the commit dictionary, commitlint for the Conventional Commits shape, and commit-trailers for trailer order. Running it while drafting surfaces problems early, rather than at the commit-msg hook where a late failure interrupts the commit.
 
 The prek commit-msg hook on `.git/COMMIT_EDITMSG` stays the real gate. `COMMIT_AGENTMSG` and its recipe only preview that gate, so a clean recipe run predicts a clean commit but never replaces the hook.
+
+## Coverage pragmas
+
+The branch-coverage gate sits at 100%. A missing branch means a missing test, never a `# pragma: no cover`. Reach for an inline pragma only when a line truly can't run under test and the standing `exclude_also` patterns in `pyproject.toml` don't already cover it. Such a pragma always carries an adjacent comment naming why the line stays unreachable. Reviewers reject a bare `# pragma: no cover` with no such defense, the same way they reject an undocumented lint ignore.

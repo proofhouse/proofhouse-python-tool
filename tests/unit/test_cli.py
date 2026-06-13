@@ -4,10 +4,11 @@
 """Tests for the CLI command surface."""
 
 import re
+import sys
 
 import pytest
 
-from proofhouse_python_tool import buildmeta, testing
+from proofhouse_python_tool import buildmeta, cli, testing
 
 # Three lines, prefixes aligned as in the Go twin; the commit field may
 # remain empty on an unstamped source checkout.
@@ -46,3 +47,14 @@ def test_bare_invocation_shows_help() -> None:
         in result.output
     )
     assert "version" in result.output
+
+
+def test_main_runs_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The console-script entry point runs through main(), which hands the
+    # typer app the process argv. The in-process CliRunner the other tests
+    # use bypasses that path, so drive main() through a clean exit here to
+    # cover the entry-point line.
+    monkeypatch.setattr(sys, "argv", ["proofhouse-python-tool", "version"])
+    with pytest.raises(SystemExit) as exc_info:
+        cli.main()
+    assert exc_info.value.code == 0
