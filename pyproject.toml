@@ -26,6 +26,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     { include-group = "test" },
+    "bandit>=1.9.4",
     "complexipy>=5.5.0",
     "diff-cover>=10.3.0",
     "import-linter>=2.11",

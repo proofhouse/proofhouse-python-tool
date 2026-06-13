@@ -153,6 +153,16 @@ repos:
         types: [python]
         pass_filenames: false
 
+      # The Go config runs its security analysis at commit time through
+      # golangci-lint's gosec analyzer; bandit is the standalone
+      # counterpart here, so a dedicated hook runs it at the same stages.
+      - id: bandit
+        name: bandit security check
+        entry: just lint-bandit
+        language: system
+        types: [python]
+        pass_filenames: false
+
       # The Go config enforces the SPDX header at commit time through
       # golangci-lint's goheader analyzer; reuse is the standalone
       # counterpart here, and it goes further by demanding a license

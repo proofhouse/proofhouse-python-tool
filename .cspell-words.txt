@@ -19,6 +19,7 @@ gocognit
 goheader
 golangci
 goreleaser
+gosec
 hardwrap
 htmlcov
 importlinter

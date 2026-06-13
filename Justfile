@@ -181,8 +181,11 @@ fix-markdown *args:
 # here. A pure dependency list with no logic of its own.
 # `lint-workflows` rides along even though actionlint reads YAML, not
 # Python: it belongs to the same per-PR gate set, in the spot where
-# the Go repo's `lint-go-all` carries it.
-lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports lint-reuse lint-workflows
+# the Go repo's `lint-go-all` carries it. `lint-bandit` sits here too —
+# the Go repo runs gosec inside its golangci-lint set, so the SAST pass
+# travels with the source linters rather than standing up a separate
+# CI job for one fast check.
+lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports lint-reuse lint-bandit lint-workflows
 
 # Run every linter that operates on the source tree. Aggregator over
 # the Python gates (via `lint-py-all`), prose (vale), spelling
@@ -428,13 +431,31 @@ audit:
     uv export --quiet --format pylock.toml --no-emit-project -o "$work/pylock.toml"
     uv run pip-audit --cache-dir "$work/cache" --locked "$work"
 
-# Roll the security scanners into one entry point a contributor can
-# run before pushing. gitleaks sweeps history for secrets and audit
-# checks the locked dependencies for advisories; bandit joins once the
-# SAST gate lands. Naming the set here means the CI security job and a
-# local pre-push run reach for the same target. A flat dependency list
-# keeps any failure attributable to the scanner that raised it.
-security: gitleaks audit
+# Scan the shipped package for insecure code patterns with bandit:
+# shell=True subprocess calls, eval, weak hashes, hardcoded passwords,
+# and the rest of its plugin catalog. This is the static second pass
+# behind ruff's `S` rules — ruff ports only part of bandit's checks and
+# trails its releases, so bandit reports what ruff has not absorbed yet.
+# Scope is `src` alone, named here because bandit takes its scan root on
+# the command line, not from the -c config (which only carries plugin
+# settings). tests/ stays out: a suite leans on assert (B101) and other
+# shapes that read as findings there, while ruff's `S` set still covers
+# test code through the per-file-ignore list. -r walks src/ recursively.
+# No severity or confidence floor is set: the package scans clean at
+# bandit's full ruleset, so the gate runs at that strictness rather than
+# pre-conceding a tier the code does not need.
+lint-bandit:
+    uv run bandit -r src
+
+# Roll the security scanners into one entry point a contributor can run
+# before pushing: gitleaks sweeps history for secrets, audit grades the
+# locked dependencies against the advisory database, and bandit reads
+# the source for insecure patterns. The same three back the CI security
+# story — though bandit also rides the lint job, since a SAST pass is
+# fast enough to belong with the other source linters rather than in a
+# job of its own. A flat dependency list keeps any failure attributable
+# to the scanner that raised it.
+security: gitleaks audit lint-bandit
 
 # --- Dependencies ---
 
