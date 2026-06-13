@@ -5,7 +5,7 @@
 
 The version comes from the installed distribution metadata. Commit and date
 come from the generated ``_buildstamp`` module the Justfile stamp recipe
-writes next to this one; placeholders stand in for every field when the tool
+writes next to this one; each field falls back to a placeholder when the tool
 runs straight from an unstamped source checkout.
 """
 

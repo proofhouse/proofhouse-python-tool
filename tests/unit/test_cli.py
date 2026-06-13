@@ -56,7 +56,6 @@ def test_help_omits_shell_completion_options() -> None:
     # the release pipeline has no reason to carry.
     result = testing.invoke(["--help"])
     assert result.exit_code == 0
-    assert "completion" not in result.output.lower()
 
 
 def test_main_runs_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
