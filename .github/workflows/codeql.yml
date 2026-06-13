@@ -1,0 +1,73 @@
+---
+# CodeQL static analysis over the Python source and the GitHub Actions
+# workflows. It runs on every pull request, every push to `main`, and
+# weekly so an unchanged `main` still gets re-graded against query
+# packs published after the last commit landed. Results upload to the
+# repository's code-scanning dashboard as SARIF.
+#
+# Two languages analyze in parallel matrix slots, both build-mode
+# `none`: Python is interpreted, so CodeQL extracts straight from the
+# checkout with no compile step, and the `actions` extractor only ever
+# reads the workflow YAML. Both slots run the `security-extended`
+# query suite, which widens the security ruleset without pulling the
+# code-quality queries that would duplicate what ruff and pyrefly
+# already enforce.
+
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, Sunday 04:43 UTC. Off-peak and well off the top of the
+    # hour so the run skips the slots every cron stampedes at once.
+    - cron: "43 4 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: "analyze (${{ matrix.language }})"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          category: "/language:${{ matrix.language }}"
