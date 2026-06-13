@@ -139,11 +139,11 @@ project-includes = ["src", "tests", "tools"]
 # pyrefly appends this entry to its built-in excludes rather than
 # replacing them.
 project-excludes = ["src/proofhouse_python_tool/_buildstamp.py"]
-# The strictest of the three behaviors: bodies of unannotated functions
-# are still checked and their return types inferred, instead of the body
-# being skipped or the return collapsing to Any. Pinned explicitly so an
-# upstream default change cannot relax the gate.
-untyped-def-behavior = "check-and-infer-return-type"
+# The strict preset is pyrefly's hardest baseline: it demands parameter
+# annotations and refuses implicit Any. The errors table below names each
+# diagnostic kind at error severity on top of it, so the gate holds even
+# if a later release reshuffles what the preset turns on.
+preset = "strict"
 
 # Every error kind pyrefly 1.0 knows, pinned to "error". Several kinds
 # (the implicit-any and unannotated families among them) default to off
