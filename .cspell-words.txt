@@ -16,6 +16,7 @@ docstrings
 dunder
 dupl
 EDITMSG
+getpgid
 gocognit
 goheader
 golangci
@@ -26,6 +27,7 @@ hardwrap
 htmlcov
 hypofuzz
 importlinter
+killpg
 ldflags
 matrixed
 mutscope
