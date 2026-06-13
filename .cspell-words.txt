@@ -1,6 +1,7 @@
 addopts
 AGENTMSG
 autostash
+backgrounded
 buildmeta
 buildstamp
 cocogitto
@@ -23,6 +24,7 @@ gosec
 grimp
 hardwrap
 htmlcov
+hypofuzz
 importlinter
 ldflags
 matrixed

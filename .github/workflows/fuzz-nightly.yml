@@ -1,0 +1,82 @@
+---
+# Nightly coverage-guided fuzzing. HypoFuzz takes the @given property
+# tests and, instead of drawing a fixed sample, steers its inputs toward
+# unexplored branches for as long as it is allowed to run. A few seconds
+# of that on every pull request would barely scratch the search space, so
+# the long pass lives here on a schedule while the per-PR suites stay
+# fast. The job runs `just fuzz` with a wide FUZZ_TIME, the same recipe a
+# contributor runs at a short budget, keeping one definition of what gets
+# fuzzed and how a hit is judged.
+#
+# A budget that finds nothing is the ordinary outcome and exits green.
+# When the search does bank a crashing input, the recipe's replay step
+# turns it into a failed test; the database that holds it is uploaded
+# below so the example outlives the runner and replays on a laptop.
+
+name: fuzz-nightly
+
+on:
+  schedule:
+    # 02:52 UTC nightly. Deep off-peak and away from the top of the hour,
+    # on a minute and hour no other schedule in this repo claims — the
+    # mutation sweep (04:26), the security audit (09:19), and the weekly
+    # CodeQL slot (04:43 Sundays) all sit elsewhere — so the fuzzer never
+    # waits behind another job for a runner.
+    - cron: "52 2 * * *"
+  workflow_dispatch:
+    inputs:
+      fuzz_time:
+        description: "Total fuzz budget in seconds (just fuzz FUZZ_TIME)"
+        type: string
+        default: "900"
+
+permissions:
+  contents: read
+
+concurrency:
+  # One fuzz run at a time. A manual dispatch must not collide with the
+  # scheduled pass over the same example database, and an in-flight run is
+  # never cancelled — the corpus it has built up is the point.
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-24.04
+    # The recipe self-limits to FUZZ_TIME, so the job ceiling only has to
+    # clear that budget plus collection, the post-run replay, and setup
+    # overhead. The 900-second default leaves comfortable headroom here;
+    # raise both together if a dispatch ever asks for a longer search.
+    timeout-minutes: 30
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up just
+        uses: proofhouse/github-actions/.github/actions/setup-just@c55eeb3115d95f6b8777538b4d6f49d48830e199 # v0.2.0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Run fuzz sweep
+        env:
+          # A scheduled trigger carries no inputs, so reach for the
+          # dispatch default when github.event.inputs is empty.
+          FUZZ_TIME: ${{ github.event.inputs.fuzz_time || '900' }}
+        run: just fuzz
+
+      - name: Upload counterexample database
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hypothesis-db
+          path: .hypothesis/
+          if-no-files-found: ignore
