@@ -6,9 +6,11 @@ buildstamp
 cocogitto
 commitlint
 complexipy
+conftest
 cyclop
 deadcode
 depguard
+dev
 docstrings
 dunder
 dupl

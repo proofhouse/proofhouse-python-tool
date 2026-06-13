@@ -136,9 +136,11 @@ basename
 falsy
 variadic
 CLIs
+dev
 devs
 CodeQL
 autobuild
+conftest
 pyproject
 pytest
 typer

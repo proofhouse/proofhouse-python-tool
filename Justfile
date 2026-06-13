@@ -138,7 +138,7 @@ run *args: stamp
 
 # Clean build artifacts
 clean:
-    rm -rf dist .pytest_cache htmlcov coverage.xml src/proofhouse_python_tool/_buildstamp.py
+    rm -rf dist .pytest_cache .hypothesis htmlcov coverage.xml src/proofhouse_python_tool/_buildstamp.py
     rm -f .coverage .coverage.*
 
 # --- Format ---
