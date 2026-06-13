@@ -313,7 +313,12 @@ lint-commit-msg:
 
 # --- Test ---
 
-# Run tests
+# Run tests. Serial by default so a failing run prints a clean,
+# ordered trace; pass `just test -n auto` to fan the suite across
+# xdist workers (one per core) when the wait outweighs the tidier
+# output. pytest-randomly reshuffles the order every run and prints
+# the seed it chose; reproduce a given order with
+# `just test -p randomly --randomly-seed=N`.
 test *args:
     uv run pytest "$@"
 
@@ -373,10 +378,15 @@ cover-combine:
 # losslessly; --cov-fail-under=0 defers the threshold to that combined
 # check, since one slot need not carry the whole package alone. The XML
 # feeds the per-slot upload; CI passes the os/python pair as the slot.
+# `-n auto` spreads the suite over one xdist worker per core, which a
+# loaded CI runner gains the most from. pytest-cov writes a per-worker
+# data file and merges them into this slot's COVERAGE_FILE on exit, so
+# the figure stays whole-suite under the workers; relative_files keeps
+# those merges portable for the cross-slot combine downstream.
 [script]
 cover-slot slot="local":
     export COVERAGE_FILE=".coverage.{{ slot }}"
-    uv run pytest --cov --cov-branch --cov-fail-under=0
+    uv run pytest --cov --cov-branch --cov-fail-under=0 -n auto
     uv run coverage xml -o coverage.xml
 
 # --- Dependencies ---
