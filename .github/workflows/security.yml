@@ -1,0 +1,92 @@
+---
+# Supply-chain scanner that reports to GitHub Code Scanning. One job
+# runs osv-scanner over the locked dependency set and uploads the
+# result as SARIF under the `osv-scanner` category. osv-scanner reads
+# uv.lock directly (Python is one of its supported lockfile
+# ecosystems), so it grades the same pinned closure `uv sync --frozen`
+# installs against the OSV database. Because OSV also tracks malicious
+# packages under the MAL- prefix alongside ordinary advisories, the
+# scan reaches name-confusion and dependency-substitution attacks that
+# a plain CVE feed would not list.
+#
+# Pull-request and push-to-main triggers seed and diff the Code
+# Scanning baseline; the daily cron re-grades an unchanged `main`
+# against advisories published after merge, the window where a
+# dependency that was clean at review time turns out vulnerable. The
+# findings reach the Security tab rather than failing the run
+# (osv-reporter runs with --fail-on-vuln=false), so an informational
+# advisory never blocks a merge. The blocking dependency gate stays in
+# `ci.yml` under pip-audit; this workflow is the visibility layer
+# beside it, the same split the Go projects keep between a passive
+# SARIF feed and a gate that fails the build.
+
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Daily, 09:19 UTC. Off-peak and a few minutes past the hour to
+    # dodge the cron rush that fires every workflow on the dot.
+    - cron: "19 9 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      # Scan the working tree and emit machine-readable JSON. The
+      # scanner walks the repo, finds uv.lock, and resolves each
+      # pinned version against OSV. continue-on-error lets a findings
+      # exit fall through to the reporter, which is what shapes the
+      # SARIF — failing here would skip the upload and hide the result.
+      - name: Run osv-scanner
+        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --format=json
+            --output=results.json
+            --recursive
+            ./
+
+      # Convert the JSON into SARIF for Code Scanning. --fail-on-vuln
+      # is false because this lane only reports; the blocking call
+      # lives in pip-audit. --gh-annotations stays off so findings
+      # surface in the Security tab alone rather than doubling as
+      # inline pull-request annotations.
+      - name: Build SARIF report
+        uses: google/osv-scanner-action/osv-reporter-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        with:
+          scan-args: |-
+            --output=results.sarif
+            --new=results.json
+            --gh-annotations=false
+            --fail-on-vuln=false
+
+      - name: Upload osv-scanner SARIF
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        with:
+          sarif_file: results.sarif
+          category: osv-scanner
