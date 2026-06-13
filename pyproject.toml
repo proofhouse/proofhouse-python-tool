@@ -1,6 +1,6 @@
 [project]
 name = "proofhouse-python-tool"
-version = "0.0.0"
+version = "0.1.0"
 description = "Reference CLI for the Proofhouse Python tool reference repository"
 authors = [{ name = "Tony Burns", email = "tony@tonyburns.net" }]
 license = "Apache-2.0"

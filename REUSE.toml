@@ -62,3 +62,10 @@ SPDX-License-Identifier = "Apache-2.0"
 path = ["AGENTS.md", "CLAUDE.md", ".claude/**"]
 SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
 SPDX-License-Identifier = "Apache-2.0"
+
+# cog regenerates the changelog from commit history on every release,
+# so it arrives without the inline header and is declared here instead.
+[[annotations]]
+path = ["CHANGELOG.md"]
+SPDX-FileCopyrightText = "Copyright Authors of Proofhouse"
+SPDX-License-Identifier = "Apache-2.0"
