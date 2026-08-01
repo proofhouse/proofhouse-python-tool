@@ -94,9 +94,11 @@ default: test
 
 # --- Setup ---
 
-# Set up development environment. New contributors run this once after
-# cloning. Idempotent: re-running upgrades dependencies, refreshes
-# Vale's synced style packages, and re-installs the git hooks.
+# New contributors run this once after cloning. Idempotent: re-running
+# upgrades dependencies, refreshes Vale's synced style packages, and
+# re-installs the git hooks.
+
+# Set up the development environment.
 setup:
     just install-brew
     just install-tools
@@ -106,17 +108,20 @@ setup:
 install-brew:
     brew bundle check || brew bundle install
 
-# Refresh non-brew tooling. Today that means Vale's synced style
-# packages; grows as new sync-style tools land.
+# Today that means Vale's synced style packages; grows as new
+# sync-style tools land.
+
+# Refresh non-brew tooling.
 install-tools:
     vale sync
 
 # --- Build ---
 
-# Write the generated _buildstamp module buildmeta reads commit and
-# date from. Python has no ldflags to inject them at link time, so
+# Python has no ldflags to inject commit and date at link time, so
 # every recipe that builds or runs the tool depends on this one,
 # regenerating the gitignored file to match the current checkout.
+
+# Generate the _buildstamp module buildmeta reads commit and date from.
 [script]
 stamp:
     cat > src/proofhouse_python_tool/_buildstamp.py <<'EOF'
@@ -131,11 +136,12 @@ stamp:
 build: stamp
     SOURCE_DATE_EPOCH={{ source_date_epoch }} uv build
 
-# Check that builds are reproducible: build the sdist and wheel twice
-# into separate temp dirs, compare sha256 digests, and fail on any
-# mismatch. uv_build normalizes archive metadata and the stamp module
-# is a pure function of the checked-out commit, so two builds of the
-# same commit must hash identically.
+# Build the sdist and wheel twice into separate temp dirs, compare
+# sha256 digests, and fail on any mismatch. uv_build normalizes archive
+# metadata and the stamp module is a pure function of the checked-out
+# commit, so two builds of the same commit must hash identically.
+
+# Check that builds are reproducible.
 [script]
 build-repro-check: stamp
     out_a=$(mktemp -d)
@@ -168,14 +174,16 @@ clean:
 
 # --- Format ---
 
-# Format Python code in place via ruff's formatter. `lint-ruff-format`
-# runs the --check form, so formatting drift fails the gate instead of
-# being rewritten behind the contributor's back.
+# `lint-ruff-format` runs the --check form, so formatting drift fails
+# the gate instead of being rewritten behind the contributor's back.
+
+# Format Python code in place via ruff's formatter.
 format *args: format-toml
     uv run ruff format {{ args }}
 
-# Format Markdown files (whitespace, list markers, code fence styles).
 # Rewrites in place. Pair with `fix-markdown` for semantic lint fixes.
+
+# Format Markdown files (whitespace, list markers, code fence styles).
 format-markdown *args:
     rumdl fmt {{ if args == "" { "." } else { args } }}
 
@@ -183,182 +191,214 @@ format-markdown *args:
 format-config *args:
     biome format --write {{ if args == "" { "." } else { args } }}
 
-# In-place TOML formatter (tombi 1.2.0) — the fixer paired with `lint-toml`'s --check
-# gate. Rewrites whitespace/style only; key and array order are preserved (schema-driven
-# reordering is disabled in tombi.toml). Excludes and lockfile skips come from tombi.toml.
+# The fixer paired with `lint-toml`'s --check gate (tombi 1.2.0).
+# Rewrites whitespace/style only; key and array order are preserved
+# (schema-driven reordering is disabled in tombi.toml). Excludes and
+# lockfile skips come from tombi.toml.
+
+# Format TOML files in place.
 format-toml:
     tombi format
 
-# Rewrite this Justfile in just's own canonical format. `lint-just`
-# runs the --check form, so drift fails the gate instead of being
-# rewritten behind the contributor's back; this is the in-place
+# `lint-just` runs the --check form, so drift fails the gate instead of
+# being rewritten behind the contributor's back; this is the in-place
 # counterpart, the same split `format` and `lint-ruff-format` follow.
 # `just --fmt` is still an unstable feature, and the flag is passed
 # explicitly rather than leaning on the `set unstable` at the top of
 # this file, so the recipe keeps working if that setting ever goes.
+
+# Rewrite this Justfile in just's own canonical format.
 format-just:
     just --fmt --unstable
 
 # --- Fix ---
 
-# Fix Python lint findings: apply ruff's auto-fixes for the enabled
-# ruleset, then run the formatter, since an applied fix can leave code
-# shaped in ways the formatter would rewrite.
+# Apply ruff's auto-fixes for the enabled ruleset, then run the
+# formatter, since an applied fix can leave code shaped in ways the
+# formatter would rewrite.
+
+# Fix Python lint findings.
 fix *args:
     uv run ruff check --fix {{ args }}
     uv run ruff format {{ args }}
 
-# Apply rumdl's auto-fixable rules to Markdown files. Complement to
-# `format-markdown` (which only rewrites whitespace and ordering, not
-# semantic lints).
+# Complement to `format-markdown` (which only rewrites whitespace and
+# ordering, not semantic lints).
+
+# Apply rumdl's auto-fixable rules to Markdown files.
 fix-markdown *args:
     rumdl check --fix {{ if args == "" { "." } else { args } }}
 
 # --- Lint ---
 
-# Aggregator over the Python-flavored lint gates. Carved out as the
-# source-language subset of `lint` below, so a contributor iterating
-# on Python can rerun those gates alone without paying for the
-# tree-wide text checks; each new Python gate appends itself here.
-# A pure dependency list with no logic of its own.
+# Carved out as the source-language subset of `lint` below, so a
+# contributor iterating on Python can rerun those gates alone without
+# paying for the tree-wide text checks; each new Python gate appends
+# itself here. A pure dependency list with no logic of its own.
 # `lint-workflows` rides along even though actionlint reads YAML, not
 # Python: it belongs to the same per-PR gate set, in the spot where
 # the Go repo's `lint-go-all` carries it. `lint-bandit` sits here too —
 # the Go repo runs gosec inside its golangci-lint set, so the SAST pass
 # travels with the source linters rather than standing up a separate
 # CI job for one fast check.
+
+# Run every Python-flavored lint gate.
 lint-py-all: lint-ruff-format lint-ruff lint-types lint-complexity lint-deadcode lint-dup-code lint-imports lint-reuse lint-bandit lint-workflows
 
-# Run every linter that operates on the source tree. Aggregator over
-# the Python gates (via `lint-py-all`), prose (vale), spelling
-# (cspell), Markdown (rumdl), config / JS / TS (biome), YAML
+# Aggregator over the Python gates (via `lint-py-all`), prose (vale),
+# spelling (cspell), Markdown (rumdl), config / JS / TS (biome), YAML
 # (yamllint), TOML (tombi), this file's own layout (just --fmt), and
 # the tree-wide .editorconfig baseline (editorconfig-checker).
 # This is what the `lint` job in .github/workflows/ci.yml runs, so a
 # gate added here is a gate the merge check enforces.
+
+# Run every linter that operates on the source tree.
 lint: lint-py-all lint-prose lint-spelling lint-markdown lint-config lint-yaml lint-toml lint-just lint-editorconfig
 
-# Check Python formatting via ruff's formatter in --check mode: report
-# drift and fail without rewriting anything. In a gate meant for CI,
-# drift must fail the run, never rewrite the tree; `format` above is
+# Report drift and fail without rewriting anything. In a gate meant for
+# CI, drift must fail the run, never rewrite the tree; `format` above is
 # the in-place counterpart. The path-less invocation deliberately
 # walks the whole tree, tests included — [tool.ruff]'s `src` setting
 # names import-resolution roots, not the scan scope.
+
+# Check Python formatting via ruff's formatter in --check mode.
 lint-ruff-format:
     uv run ruff format --check
 
-# Lint Python code against the full ruff ruleset. Rule selection and
-# the justified ignore list live in pyproject.toml under [tool.ruff].
-# The path-less invocation deliberately walks the whole tree, tests
-# included — [tool.ruff]'s `src` setting names import-resolution
-# roots, not the scan scope.
+# Rule selection and the justified ignore list live in pyproject.toml
+# under [tool.ruff]. The path-less invocation deliberately walks the
+# whole tree, tests included — [tool.ruff]'s `src` setting names
+# import-resolution roots, not the scan scope.
+
+# Lint Python code against the full ruff ruleset.
 lint-ruff *args:
     uv run ruff check {{ args }}
 
-# Type check Python code with pyrefly. The [tool.pyrefly] tables in
-# pyproject.toml pin every error kind to "error" and pick the project
-# scope, so a bare project-mode check is the whole gate.
+# The [tool.pyrefly] tables in pyproject.toml pin every error kind to
+# "error" and pick the project scope, so a bare project-mode check is
+# the whole gate.
+
+# Type check Python code with pyrefly.
 lint-types:
     uv run pyrefly check
 
-# Measure per-function cognitive complexity with complexipy and fail
-# on any function over the ceiling. Scope and threshold live in
+# Fail on any function over the ceiling. Scope and threshold live in
 # pyproject.toml under [tool.complexipy].
+
+# Measure per-function cognitive complexity with complexipy.
 lint-complexity:
     uv run complexipy
 
-# Find dead code with vulture. Scope lives in pyproject.toml under
-# [tool.vulture], which also scans vulture_allowlist.py — the per-entry
-# documented exemptions for names whose callers vulture cannot see
-# (typer's decorator registration, the console-script entry in
-# pyproject.toml).
+# Scope lives in pyproject.toml under [tool.vulture], which also scans
+# vulture_allowlist.py — the per-entry documented exemptions for names
+# whose callers vulture cannot see (typer's decorator registration, the
+# console-script entry in pyproject.toml).
+
+# Find dead code with vulture.
 lint-deadcode:
     uv run vulture
 
-# Detect copy-pasted code with pylint, pared down in pyproject.toml's
-# [tool.pylint] tables to its similarities checker alone — the one
-# message in pylint's catalog no other tool in the chain covers.
-# pylint takes its scan roots on the command line rather than from
-# config, so this recipe is where the src-plus-tests scope lives.
+# pylint is pared down in pyproject.toml's [tool.pylint] tables to its
+# similarities checker alone — the one message in pylint's catalog no
+# other tool in the chain covers. pylint takes its scan roots on the
+# command line rather than from config, so this recipe is where the
+# src-plus-tests scope lives.
+
+# Detect copy-pasted code with pylint.
 lint-dup-code:
     uv run pylint src tests
 
-# Enforce the architecture contracts in pyproject.toml's
-# [tool.importlinter] tables: cli stays above buildmeta, and no
-# production module imports the shipped testing helpers. The bare
-# command is import-linter's own CLI, not this recipe recursing.
+# The contracts live in pyproject.toml's [tool.importlinter] tables:
+# cli stays above buildmeta, and no production module imports the
+# shipped testing helpers. The bare command is import-linter's own CLI,
+# not this recipe recursing.
+
+# Enforce the architecture contracts import-linter defines.
 lint-imports:
     uv run lint-imports
 
-# Verify SPDX compliance with reuse: every tracked file must declare
-# copyright and license, either through the inline two-line header on
-# Python sources or through a bulk annotation in REUSE.toml. The flag
-# skips reuse's per-file process pool — on a tree this size the pool
-# costs more to spawn than it saves, and the serial path also works
-# in restricted environments that forbid the semaphores a pool needs.
+# Every tracked file must declare copyright and license, either through
+# the inline two-line header on Python sources or through a bulk
+# annotation in REUSE.toml. The flag skips reuse's per-file process
+# pool — on a tree this size the pool costs more to spawn than it
+# saves, and the serial path also works in restricted environments that
+# forbid the semaphores a pool needs.
+
+# Verify SPDX compliance with reuse.
 lint-reuse:
     uv run reuse --no-multiprocessing lint
 
-# Lint prose in Markdown files and source comments via vale. Glob
-# excludes the LICENSE (canonical Apache 2.0 text), the auto-generated
-# changelog, vale's own style packages, scratch dirs, the gitignored
-# agent worktrees under .claude/worktrees/, the COMMIT_AGENTMSG draft
-# (the `lint-commit-msg` recipe owns that one under the stricter
-# commit scope), the gitignored apm_modules/ package cache and the
-# rules and skills the same APM package deploys under .claude/, the
-# virtualenv, build output, and the pytest and complexipy caches
-# (each carries a generated README); the per-file-type rules in
+# The glob excludes the LICENSE (canonical Apache 2.0 text), the
+# auto-generated changelog, vale's own style packages, scratch dirs,
+# the gitignored agent worktrees under .claude/worktrees/, the
+# COMMIT_AGENTMSG draft (the `lint-commit-msg` recipe owns that one
+# under the stricter commit scope), the gitignored apm_modules/ package
+# cache and the rules and skills the same APM package deploys under
+# .claude/, the virtualenv, build output, and the pytest and complexipy
+# caches (each carries a generated README); the per-file-type rules in
 # .vale.ini decide what else gets inspected.
+
+# Lint prose in Markdown files and source comments via vale.
 lint-prose *args:
     vale --output=proofhouse-agent.tmpl --glob='!{LICENSE,CHANGELOG.md,.vale/*,tmp/*,apm_modules/*,.claude/rules/*,.claude/skills/*,.claude/worktrees/*,COMMIT_AGENTMSG,.venv/*,dist/*,.pytest_cache/*,.complexipy_cache/*}' {{ if args == "" { "." } else { args } }}
 
-# Check spelling across the tree against the project dictionary at
-# .cspell-words.txt. cspell ignores binaries, generated files, and the
-# virtualenv via the ignorePaths block in .cspell.jsonc. The
-# COMMIT_AGENTMSG draft gets excluded here and checked by
-# `lint-commit-msg` instead, so a work-in-progress message never trips
-# the tree-wide spell check.
+# Words come from the project dictionary at .cspell-words.txt. cspell
+# ignores binaries, generated files, and the virtualenv via the
+# ignorePaths block in .cspell.jsonc. The COMMIT_AGENTMSG draft gets
+# excluded here and checked by `lint-commit-msg` instead, so a
+# work-in-progress message never trips the tree-wide spell check.
+
+# Check spelling across the tree.
 lint-spelling *args:
     cspell --config .cspell.jsonc --no-summary --no-progress --no-must-find-files --exclude COMMIT_AGENTMSG {{ if args == "" { "." } else { args } }}
 
-# Lint Markdown files against the project's .rumdl.toml ruleset.
 # rumdl handles structural lints (heading style, list marker style,
 # code fence style); vale handles prose.
+
+# Lint Markdown files against the project's .rumdl.toml ruleset.
 lint-markdown *args:
     rumdl check {{ if args == "" { "." } else { args } }}
 
-# Lint JSON / JS / TS files via biome. Recommended ruleset, biome's
-# own formatter; covers config files (biome.json, .cspell.jsonc) and
-# any future scripts under .github/actions/.
+# Recommended ruleset, biome's own formatter; covers config files
+# (biome.json, .cspell.jsonc) and any future scripts under
+# .github/actions/.
+
+# Lint JSON / JS / TS files via biome.
 lint-config *args:
     biome check --files-ignore-unknown=true {{ if args == "" { "." } else { args } }}
 
-# Lint YAML files (config, workflows, action definitions). --strict
-# treats warnings as errors so the gate matches CI behavior; per-rule
-# tuning lives in .yamllint.yaml.
+# --strict treats warnings as errors so the gate matches CI behavior;
+# per-rule tuning lives in .yamllint.yaml.
+
+# Lint YAML files (config, workflows, action definitions).
 lint-yaml *args:
     yamllint --strict {{ if args == "" { "." } else { args } }}
 
-# tombi is the org TOML gate (tombi 1.2.0): it lint-checks every tracked *.toml.
-# Cargo.toml/pyproject.toml validate offline against embedded SchemaStore schemas;
-# cog.toml, .rumdl.toml, REUSE.toml, deny.toml et al. get syntax + style checks. We run
-# the format gate in --check --diff mode here as well, so an unformatted TOML file fails
-# `just lint` without being rewritten (`just format-toml` is the in-place fixer).
-# --offline keeps CI hermetic against SchemaStore; --error-on-warnings promotes warnings
-# to hard failures (matching the org -D-warnings / --max-warnings=0 posture). Scope
-# (include/exclude, lockfile skips, schema.strict=false) lives in tombi.toml, so this
-# recipe passes NO path args — tombi walks the tree per that config. This deliberately
-# departs from the sibling `*args`-default-`.` idiom because tombi centralizes scoping in
-# tombi.toml rather than on the CLI, keeping excludes in one place.
+# tombi is the org TOML gate (tombi 1.2.0): it lint-checks every
+# tracked *.toml. Cargo.toml/pyproject.toml validate offline against
+# embedded SchemaStore schemas; cog.toml, .rumdl.toml, REUSE.toml,
+# deny.toml et al. get syntax + style checks. We run the format gate in
+# --check --diff mode here as well, so an unformatted TOML file fails
+# `just lint` without being rewritten (`just format-toml` is the
+# in-place fixer). --offline keeps CI hermetic against SchemaStore;
+# --error-on-warnings promotes warnings to hard failures (matching the
+# org -D-warnings / --max-warnings=0 posture). Scope (include/exclude,
+# lockfile skips, schema.strict=false) lives in tombi.toml, so this
+# recipe passes NO path args — tombi walks the tree per that config.
+# This deliberately departs from the sibling `*args`-default-`.` idiom
+# because tombi centralizes scoping in tombi.toml rather than on the
+# CLI, keeping excludes in one place.
+
+# Lint and format-check every tracked TOML file.
 lint-toml:
     tombi format --check --diff
     tombi lint --offline --error-on-warnings
 
-# Warn when the locally installed tombi differs from the verified
-# release. Advisory rather than fatal: tombi comes from Homebrew and
-# moves on its own schedule, and that is fine so long as it stays
-# visible rather than silently reformatting a file the gate then
-# rejects.
+# Advisory rather than fatal: tombi comes from Homebrew and moves on
+# its own schedule, and that is fine so long as it stays visible rather
+# than silently reformatting a file the gate then rejects.
+
+# Warn when the local tombi differs from the verified release.
 [script]
 check-tombi-version:
     local=$(tombi --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
@@ -369,23 +409,23 @@ check-tombi-version:
         echo "tombi ${local} matches the verified release"
     fi
 
-# Check this Justfile against just's own formatter in --check mode:
-# report drift and fail without rewriting anything. Nothing else in
+# Report drift and fail without rewriting anything. Nothing else in
 # the chain looks at this file's layout — ruff, biome, rumdl, and
 # yamllint each own a different language — so absent this gate the
 # Justfile is the one config in the tree whose formatting drifts
 # unchecked. `format-just` above is the in-place counterpart. See that
 # recipe for why --unstable is spelled out.
+
+# Check this Justfile against just's own formatter in --check mode.
 lint-just:
     just --fmt --check --unstable
 
-# Enforce .editorconfig with editorconfig-checker: charset, line
-# endings, final newline, trailing whitespace, and both the
-# tab-versus-space indent style and the indent width. The file has sat
-# in the tree unread by anything but editors; this is the gate that
-# makes it binding. With no path arguments the checker walks the files
-# git tracks, so the virtualenv, build output, and Vale's synced style
-# packages are out of scope by construction —
+# The gate covers charset, line endings, final newline, trailing
+# whitespace, and both the tab-versus-space indent style and the indent
+# width. The file has sat in the tree unread by anything but editors;
+# this is the gate that makes it binding. With no path arguments the
+# checker walks the files git tracks, so the virtualenv, build output,
+# and Vale's synced style packages are out of scope by construction —
 # .editorconfig-checker.json repeats those exclusions for the case
 # where a caller names paths explicitly, mirroring the top-level
 # `exclude:` in .pre-commit-config.yaml, and adds CHANGELOG.md, which
@@ -393,103 +433,120 @@ lint-just:
 # also ship a short `ec` alias, but the Homebrew formula the Brewfile
 # provisions from builds the long name only, so the recipe spells it
 # out.
+
+# Enforce .editorconfig with editorconfig-checker.
 lint-editorconfig:
     editorconfig-checker
 
-# Lint GitHub Actions workflow files via actionlint. actionlint walks
-# `.github/workflows/` by default, parses each workflow, and flags
-# unknown actions, mis-typed expressions, shellcheck issues inside
-# `run:` blocks, and SHA-pin drift. Complements `lint-yaml` (which
-# checks YAML structure) with workflow-shape rules yamllint can't see.
-# Pinned Docker image; Renovate bumps the version + digest via the
-# shared Justfile customManager.
+# actionlint walks `.github/workflows/` by default, parses each
+# workflow, and flags unknown actions, mis-typed expressions,
+# shellcheck issues inside `run:` blocks, and SHA-pin drift.
+# Complements `lint-yaml` (which checks YAML structure) with
+# workflow-shape rules yamllint can't see. Pinned Docker image;
+# Renovate bumps the version + digest via the shared Justfile
+# customManager.
+
+# Lint GitHub Actions workflow files via actionlint.
 lint-workflows:
     {{ actionlint }}
 
-# Pre-validate a drafted commit message against the same gates the
-# commit-msg hook runs, so message problems surface while iterating
-# rather than at commit time. Reads the draft from the repo-root
-# COMMIT_AGENTMSG file (gitignored; see AGENTS.md for the workflow) and
-# runs the commit-msg stage through prek, which fires the four shared
-# hooks from proofhouse/pre-commit-hooks: commit-trailers, commitlint,
-# vale-commit-msg, and cspell-commit-msg. The real gate stays the prek
-# commit-msg hook on .git/COMMIT_EDITMSG; this recipe only mirrors it.
-# Commit the validated draft with `git commit -F COMMIT_AGENTMSG`.
+# Running the same gates the commit-msg hook runs surfaces message
+# problems while iterating rather than at commit time. Reads the draft
+# from the repo-root COMMIT_AGENTMSG file (gitignored; see AGENTS.md for
+# the workflow) and runs the commit-msg stage through prek, which fires
+# the four shared hooks from proofhouse/pre-commit-hooks:
+# commit-trailers, commitlint, vale-commit-msg, and cspell-commit-msg.
+# The real gate stays the prek commit-msg hook on .git/COMMIT_EDITMSG;
+# this recipe only mirrors it. Commit the validated draft with
+# `git commit -F COMMIT_AGENTMSG`.
+
+# Pre-validate a drafted commit message against the commit-msg gates.
 lint-commit-msg:
     prek run --stage commit-msg --commit-msg-filename COMMIT_AGENTMSG
 
 # --- Test ---
 
-# Run tests. Serial by default so a failing run prints a clean,
-# ordered trace; pass `just test -n auto` to fan the suite across
-# xdist workers (one per core) when the wait outweighs the tidier
-# output. pytest-randomly reshuffles the order every run and prints
-# the seed it chose; reproduce a given order with
+# Serial by default so a failing run prints a clean, ordered trace;
+# pass `just test -n auto` to fan the suite across xdist workers (one
+# per core) when the wait outweighs the tidier output. pytest-randomly
+# reshuffles the order every run and prints the seed it chose;
+# reproduce a given order with
 # `just test -p randomly --randomly-seed=N`.
+
+# Run tests.
 test *args:
     uv run pytest "$@"
 
-# Run the suite under coverage and enforce the branch-coverage floor.
 # `--cov` with no value reads [tool.coverage.run]'s `source`, so the
 # package — not the tests — is what gets measured; `--cov-branch` turns
 # on branch tracking. The terminal report and the fail_under threshold
 # both come from [tool.coverage.report]. This is the inner-loop recipe:
 # run it, read the Missing column, write the test that reaches the gap.
+
+# Run the suite under coverage and enforce the branch-coverage floor.
 cover:
     uv run pytest --cov --cov-branch
 
-# Render the per-line HTML report under htmlcov/ and name the entry
-# point. The source view shades each statement and each branch arm by
-# whether a test reached it, which points at the exact line a new test
-# still has to exercise.
+# The source view shades each statement and each branch arm by whether
+# a test reached it, which points at the exact line a new test still
+# has to exercise.
+
+# Render the per-line HTML report under htmlcov/ and name the entry point.
 cover-html:
     uv run pytest --cov --cov-branch
     uv run coverage html
     @echo "open htmlcov/index.html"
 
-# Emit Cobertura XML from the data the last run left in .coverage.
 # Cobertura is what diff-cover consumes and what the CI upload action
 # publishes, so this recipe assumes a `cover` (or `cover-slot`) run
 # already produced the data file.
+
+# Emit Cobertura XML from the data the last run left in .coverage.
 cover-xml:
     uv run coverage xml -o coverage.xml
 
-# Fail when any line changed since [base] lacks coverage. The whole-tree
-# floor already sits at 100%, so on a clean branch this gate is
-# redundant; it earns its place by catching a diff that drops coverage
-# on touched lines before the slower combined total recomputes in CI.
-# Reads coverage.xml, so run `cover-xml` first (CI does).
+# The whole-tree floor already sits at 100%, so on a clean branch this
+# gate is redundant; it earns its place by catching a diff that drops
+# coverage on touched lines before the slower combined total recomputes
+# in CI. Reads coverage.xml, so run `cover-xml` first (CI does).
+
+# Fail when any line changed since [base] lacks coverage.
 cover-diff base="origin/main":
     uv run diff-cover coverage.xml --compare-branch={{ base }} --fail-under=100
 
-# Re-print the report and re-check the threshold against whatever data
-# .coverage already holds, without rerunning the suite. Locally it
-# re-checks after an exclude_also edit without paying for another run.
+# The report and the threshold check both read whatever data .coverage
+# already holds, without rerunning the suite. Locally it re-checks
+# after an exclude_also edit without paying for another run.
+
+# Re-check the coverage threshold without rerunning the suite.
 cover-check:
     uv run coverage report
 
-# Combine every slot's data file into one .coverage, enforce the
-# threshold against the merged total, and render the combined Cobertura.
+# Each slot's data file merges into one .coverage, the threshold runs
+# against the merged total, and the combined Cobertura gets rendered.
 # This is the authoritative gate: a branch that no single platform
 # exercises still has to be reached by some slot, and the merged report
 # is what proves it. The CI coverage job runs this after collecting the
 # per-slot artifacts.
+
+# Combine every slot's coverage and check the merged total.
 cover-combine:
     uv run coverage combine
     uv run coverage report --fail-under=100
     uv run coverage xml -o coverage.xml
 
-# Capture one matrix slot's coverage into a uniquely named data file and
-# render that slot's Cobertura XML. COVERAGE_FILE names the data file
-# after the slot so the downstream job can combine every slot's data
-# losslessly; --cov-fail-under=0 defers the threshold to that combined
-# check, since one slot need not carry the whole package alone. The XML
-# feeds the per-slot upload; CI passes the os/python pair as the slot.
-# `-n auto` spreads the suite over one xdist worker per core, which a
-# loaded CI runner gains the most from. pytest-cov writes a per-worker
-# data file and merges them into this slot's COVERAGE_FILE on exit, so
-# the figure stays whole-suite under the workers; relative_files keeps
-# those merges portable for the cross-slot combine downstream.
+# COVERAGE_FILE names the data file after the slot so the downstream
+# job can combine every slot's data losslessly; --cov-fail-under=0
+# defers the threshold to that combined check, since one slot need not
+# carry the whole package alone. The XML feeds the per-slot upload; CI
+# passes the os/python pair as the slot. `-n auto` spreads the suite
+# over one xdist worker per core, which a loaded CI runner gains the
+# most from. pytest-cov writes a per-worker data file and merges them
+# into this slot's COVERAGE_FILE on exit, so the figure stays
+# whole-suite under the workers; relative_files keeps those merges
+# portable for the cross-slot combine downstream.
+
+# Capture one matrix slot's coverage and render its Cobertura XML.
 [script]
 cover-slot slot="local":
     export COVERAGE_FILE=".coverage.{{ slot }}"
@@ -507,16 +564,18 @@ cover-slot slot="local":
 # gremlins' multiply-the-baseline coefficient — cosmic-ray takes seconds.
 mutation_timeout := env("MUTATION_TIMEOUT", "30.0")
 
-# Mutate one path for fast iteration. cosmic-ray rewrites each expression
-# under [path] in turn, reruns the suite, and labels the mutant KILLED
-# (a test caught it), SURVIVED (the suite passed regardless), or
-# incompetent (the change broke import or timed out). SURVIVED mutants are
-# the assertion gaps line coverage cannot see. This is the inner-loop
-# form: pass a single module to scope the run, the way the full sweep
-# below scopes nothing. It derives a throwaway config from cosmic-ray.toml
-# with the path and the timeout swapped in, then drops the surviving-only
-# report and the survival rate. mutate-all powers the nightly; this one
-# stays at the developer's elbow.
+# cosmic-ray rewrites each expression under [path] in turn, reruns the
+# suite, and labels the mutant KILLED (a test caught it), SURVIVED (the
+# suite passed regardless), or incompetent (the change broke import or
+# timed out). SURVIVED mutants are the assertion gaps line coverage
+# cannot see. This is the inner-loop form: pass a single module to scope
+# the run, the way the full sweep below scopes nothing. It derives a
+# throwaway config from cosmic-ray.toml with the path and the timeout
+# swapped in, then drops the surviving-only report and the survival
+# rate. mutate-all powers the nightly; this one stays at the developer's
+# elbow.
+
+# Mutate one path for fast iteration.
 [script]
 mutate path="src/proofhouse_python_tool":
     mkdir -p .cosmic-ray
@@ -531,16 +590,18 @@ mutate path="src/proofhouse_python_tool":
     uv run cr-report --surviving-only "$session"
     uv run cr-rate "$session"
 
-# Mutate the whole first-party package. This is the nightly form, factored
-# out so the scheduled workflow under .github/workflows/ has one recipe to
-# call and a contributor can run the identical sweep before a release-bound
-# change — the single-source-of-truth split the fuzz and fuzz-nightly pair
-# also follow. The module-path and exclusions come straight from
+# This is the nightly form, factored out so the scheduled workflow under
+# .github/workflows/ has one recipe to call and a contributor can run
+# the identical sweep before a release-bound change — the
+# single-source-of-truth split the fuzz and fuzz-nightly pair also
+# follow. The module-path and exclusions come straight from
 # cosmic-ray.toml; only the timeout gets the MUTATION_TIMEOUT treatment.
 # No threshold lives here: the sweep reports survivors and exits zero
-# whatever the score, leaving the blocking score check to the diff-scoped
-# PR gate. A reader scans the surviving-only block for the assertion gaps
-# to close.
+# whatever the score, leaving the blocking score check to the
+# diff-scoped PR gate. A reader scans the surviving-only block for the
+# assertion gaps to close.
+
+# Mutate the whole first-party package.
 [script]
 mutate-all:
     mkdir -p .cosmic-ray
@@ -554,20 +615,23 @@ mutate-all:
     uv run cr-report --surviving-only "$session"
     uv run cr-rate "$session"
 
+# tools/mutscope.py diffs [base] against HEAD, keeps the changed
+# first-party modules, follows the import graph to the modules that
+# depend on them, and writes a config narrowed to that set; cosmic-ray
+# then mutates just those files. Unlike mutate-all this one carries a
+# threshold: every targeted mutant has to die. A full-tree 100% kill
+# would be too slow and too flaky to sit on every pull request, but the
+# diff set is small enough that demanding zero survivors is both fast
+# and stable. The check counts survivors out of the session rather than
+# reading `cr-rate --fail-over 0`, whose guard treats a threshold of 0
+# as falsy and so never fires; counting is exact regardless of how a
+# fractional rate rounds. An empty diff leaves the scope empty,
+# cosmic-ray enumerates no mutants, and the count is zero — the no-op a
+# docs-only or test-only branch wants. Equivalent mutants accepted in
+# the full sweep stay excluded through cosmic-ray.toml, which mutscope
+# copies forward verbatim.
+
 # Mutate only what a branch could have broken, and block on any survivor.
-# tools/mutscope.py diffs [base] against HEAD, keeps the changed first-party
-# modules, follows the import graph to the modules that depend on them, and
-# writes a config narrowed to that set; cosmic-ray then mutates just those
-# files. Unlike mutate-all this one carries a threshold: every targeted mutant
-# has to die. A full-tree 100% kill would be too slow and too flaky to sit on
-# every pull request, but the diff set is small enough that demanding zero
-# survivors is both fast and stable. The check counts survivors out of the
-# session rather than reading `cr-rate --fail-over 0`, whose guard treats a
-# threshold of 0 as falsy and so never fires; counting is exact regardless of
-# how a fractional rate rounds. An empty diff leaves the scope empty, cosmic-ray
-# enumerates no mutants, and the count is zero — the no-op a docs-only or
-# test-only branch wants. Equivalent mutants accepted in the full sweep stay
-# excluded through cosmic-ray.toml, which mutscope copies forward verbatim.
 [script]
 mutate-diff base="origin/main":
     mkdir -p .cosmic-ray
@@ -588,35 +652,37 @@ mutate-diff base="origin/main":
 
 # --- Fuzzing ---
 
-# Put the property tests under HypoFuzz, whose coverage-guided loop hooks
-# pytest collection and keeps mutating inputs toward the buildmeta branches
-# a fixed sample never reaches, banking any falsifier into the shared
-# .hypothesis database. tools/fuzz.py drives it because the search resists a
-# plain wrapper: it never returns on its own, and a killed worker pool's
-# exit code says nothing about whether a bug turned up. So the helper caps
-# the run at FUZZ_TIME — bare seconds or a 30s/5m/1h duration, the dial the
-# Go twin's fuzz recipe also reads, short by default for the edit loop and
-# wide from the nightly — interrupts the search, and then replays the suite
-# under pytest. That replay is the verdict: a banked counterexample comes
-# back as a Hypothesis failure, so green means the budget found nothing and
-# red carries the offending input. The scheduled sweep invokes this same
-# recipe at a larger budget, one definition for both callers the way the
-# mutate / mutate-all pair already splits. Keeping the budget clock and the
-# replay in a typed helper holds them to the repo's lint and type gates,
-# which an inline shell block sidesteps.
+# HypoFuzz's coverage-guided loop hooks pytest collection and keeps
+# mutating inputs toward the buildmeta branches a fixed sample never
+# reaches, banking any falsifier into the shared .hypothesis database.
+# tools/fuzz.py drives it because the search resists a plain wrapper: it
+# never returns on its own, and a killed worker pool's exit code says
+# nothing about whether a bug turned up. So the helper caps the run at
+# FUZZ_TIME — bare seconds or a 30s/5m/1h duration, the dial the Go
+# twin's fuzz recipe also reads, short by default for the edit loop and
+# wide from the nightly — interrupts the search, and then replays the
+# suite under pytest. That replay is the verdict: a banked
+# counterexample comes back as a Hypothesis failure, so green means the
+# budget found nothing and red carries the offending input. The
+# scheduled sweep invokes this same recipe at a larger budget, one
+# definition for both callers the way the mutate / mutate-all pair
+# already splits. Keeping the budget clock and the replay in a typed
+# helper holds them to the repo's lint and type gates, which an inline
+# shell block sidesteps.
+
+# Put the property tests under HypoFuzz.
 fuzz:
     uv run python tools/fuzz.py
 
 # --- Security ---
 
-# Hunt the working tree and every historical commit for leaked
-# secrets. `gitleaks git` replays each commit's diff through the
-# bundled regex and entropy detectors, so a credential that landed in
-# an early commit and was later deleted still surfaces — a plain scan
-# of the checked-out files would miss it. `--verbose` prints the file,
-# line, commit, and rule behind each hit, enough to locate the leak
-# without a second run. The scan runs from a digest-pinned image, so
-# every machine reads the same detector set, and Renovate proposes the
+# `gitleaks git` replays each commit's diff through the bundled regex
+# and entropy detectors, so a credential that landed in an early commit
+# and was later deleted still surfaces — a plain scan of the
+# checked-out files would miss it. `--verbose` prints the file, line,
+# commit, and rule behind each hit, enough to locate the leak without a
+# second run. The scan runs from a digest-pinned image, so every
+# machine reads the same detector set, and Renovate proposes the
 # version and digest bumps that advance it with upstream.
 #
 # This gate is deliberately local-only: no ci.yml job mirrors it.
@@ -624,22 +690,25 @@ fuzz:
 # side and refuses a push that introduces a known secret pattern, so a
 # CI re-scan would duplicate a check the platform already enforces
 # before the commit ever reaches a pull request.
+
+# Hunt the working tree and every historical commit for leaked secrets.
 gitleaks:
     {{ gitleaks_scan }} git --verbose .
 
-# Audit the locked dependency closure for known vulnerabilities. The
-# scan runs against an exported PEP 751 lockfile rather than the live
-# .venv: `uv export` resolves uv.lock into pylock.toml, so pip-audit
-# sees the exact versions a `uv sync --frozen` would install — every
-# transitive package, not only the direct typer/rich/dev entries — and
-# the gate tracks the committed lock instead of whatever happens to be
-# installed. pip-audit's --locked reads pylock.toml natively (2.9+),
+# The scan runs against an exported PEP 751 lockfile rather than the
+# live .venv: `uv export` resolves uv.lock into pylock.toml, so
+# pip-audit sees the exact versions a `uv sync --frozen` would install —
+# every transitive package, not only the direct typer/rich/dev entries —
+# and the gate tracks the committed lock instead of whatever happens to
+# be installed. pip-audit's --locked reads pylock.toml natively (2.9+),
 # queries each pinned version against the PyPI advisory database, and
 # exits nonzero on any match. --no-emit-project drops the unversioned
 # workspace package, which pip-audit would otherwise skip with a note.
 # The export and the PyPI HTTP cache both land in a throwaway dir the
 # trap removes on exit, so the run stays hermetic and never leans on a
 # writable per-user cache location.
+
+# Audit the locked dependency closure for known vulnerabilities.
 [script]
 audit:
     work=$(mktemp -d)
@@ -647,44 +716,49 @@ audit:
     uv export --quiet --format pylock.toml --no-emit-project -o "$work/pylock.toml"
     uv run pip-audit --cache-dir "$work/cache" --locked "$work"
 
-# Scan the shipped package for insecure code patterns with bandit:
-# shell=True subprocess calls, eval, weak hashes, hardcoded passwords,
-# and the rest of its plugin catalog. This is the static second pass
-# behind ruff's `S` rules — ruff ports only part of bandit's checks and
-# trails its releases, so bandit reports what ruff has not absorbed yet.
-# Scope is `src` alone, named here because bandit takes its scan root on
-# the command line, not from the -c config (which only carries plugin
-# settings). tests/ stays out: a suite leans on assert (B101) and other
-# shapes that read as findings there, while ruff's `S` set still covers
-# test code through the per-file-ignore list. -r walks src/ recursively.
-# No severity or confidence floor is set: the package scans clean at
-# bandit's full ruleset, so the gate runs at that strictness rather than
-# pre-conceding a tier the code does not need.
+# bandit's plugin catalog covers shell=True subprocess calls, eval,
+# weak hashes, hardcoded passwords, and more. This is the static second
+# pass behind ruff's `S` rules — ruff ports only part of bandit's checks
+# and trails its releases, so bandit reports what ruff has not absorbed
+# yet. Scope is `src` alone, named here because bandit takes its scan
+# root on the command line, not from the -c config (which only carries
+# plugin settings). tests/ stays out: a suite leans on assert (B101) and
+# other shapes that read as findings there, while ruff's `S` set still
+# covers test code through the per-file-ignore list. -r walks src/
+# recursively. No severity or confidence floor is set: the package scans
+# clean at bandit's full ruleset, so the gate runs at that strictness
+# rather than pre-conceding a tier the code does not need.
+
+# Scan the shipped package for insecure code patterns with bandit.
 lint-bandit:
     uv run bandit -r src
 
-# Roll the security scanners into one entry point a contributor can run
-# before pushing: gitleaks sweeps history for secrets, audit grades the
-# locked dependencies against the advisory database, and bandit reads
-# the source for insecure patterns. The same three back the CI security
-# story — though bandit also rides the lint job, since a SAST pass is
-# fast enough to belong with the other source linters rather than in a
-# job of its own. A flat dependency list keeps any failure attributable
-# to the scanner that raised it.
+# A contributor can run it before pushing: gitleaks sweeps history for
+# secrets, audit grades the locked dependencies against the advisory
+# database, and bandit reads the source for insecure patterns. The same
+# three back the CI security story — though bandit also rides the lint
+# job, since a SAST pass is fast enough to belong with the other source
+# linters rather than in a job of its own. A flat dependency list keeps
+# any failure attributable to the scanner that raised it.
+
+# Roll the security scanners into one entry point.
 security: gitleaks audit lint-bandit
 
 # --- Dependencies ---
 
-# Check that uv.lock is in sync with pyproject.toml. CI runs this on
-# every PR; contributors run `uv lock` and commit the result.
+# CI runs this on every PR; contributors run `uv lock` and commit the
+# result.
+
+# Check that uv.lock is in sync with pyproject.toml.
 lock-check:
     uv lock --check
 
 # --- Utilities ---
 
-# Sync Vale styles and dictionaries. Run once after cloning the repo,
-# and whenever .vale.ini's Packages list changes. CI runs this before
-# `just lint-prose`.
+# Run once after cloning the repo, and whenever .vale.ini's Packages
+# list changes. CI runs this before `just lint-prose`.
+
+# Sync Vale styles and dictionaries.
 vale-sync:
     vale sync
 
@@ -692,36 +766,42 @@ vale-sync:
 prek:
     prek
 
-# Run pre-commit hooks on every file in the tree. Useful after a
-# hook config change or before a release sweep.
+# Useful after a hook config change or before a release sweep.
+
+# Run pre-commit hooks on every file in the tree.
 prek-all:
     prek run --all-files
 
-# Install the project's pre-commit hooks (commit-msg, pre-commit,
-# pre-push). `just setup` runs this automatically; it stays a separate
-# recipe so contributors can re-install the hooks (which modify .git/)
-# without re-running the whole setup.
+# The hooks cover commit-msg, pre-commit, and pre-push. `just setup`
+# runs this automatically; it stays a separate recipe so contributors
+# can re-install the hooks (which modify .git/) without re-running the
+# whole setup.
+
+# Install the project's pre-commit hooks.
 prek-install:
     prek install -t commit-msg -t pre-commit -t pre-push
 
-# Generate the full CHANGELOG.md from Conventional Commit history.
 # `cog changelog` emits Markdown without an H1, so the pipeline prepends
 # one and writes the file before linting it in place: rumdl matches the
 # CHANGELOG.md per-file-ignores in .rumdl.toml (which disable MD024 for
 # the repeated version headings) against on-disk paths, not stdin.
+
+# Generate the full CHANGELOG.md from Conventional Commit history.
 generate-changelog:
     cog changelog | { echo "# Changelog"; cat; } > CHANGELOG.md
     rumdl check --fix CHANGELOG.md
 
-# Preview the changelog entries since the last tagged release. Useful
-# during release prep to see what `cog changelog` will emit before
-# committing the regeneration.
+# Useful during release prep to see what `cog changelog` will emit
+# before committing the regeneration.
+
+# Preview the changelog entries since the last tagged release.
 preview-changelog:
     cog changelog --at $(git describe --tags)..HEAD -t full_hash | rumdl check -d MD041 --fix --stdin
 
-# Generate release notes for a specific version (or for HEAD if no
-# version is given). Output goes to stdout; pipe to a file or paste
-# into the GitHub release body.
+# Output goes to stdout; pipe to a file or paste into the GitHub
+# release body.
+
+# Generate release notes for a version, or for HEAD if none is given.
 [script]
 generate-release-notes version="":
     v=$([[ -n "{{ version }}" ]] && echo "v{{ version }}" || echo "..$(git rev-parse HEAD)")
