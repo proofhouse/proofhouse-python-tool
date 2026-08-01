@@ -30,6 +30,7 @@ hypofuzz
 importlinter
 killpg
 ldflags
+lockfiles
 matrixed
 mutscope
 orbstack
@@ -38,6 +39,7 @@ pipefail
 prek
 proofhouse
 pylock
+pyproject
 rhysd
 rumdl
 sandboxed
@@ -46,7 +48,9 @@ shellcheck
 tbhb
 testpaths
 tmpl
+tombi
 Tricolon
+venv
 worktree
 Worktree
 worktrees
