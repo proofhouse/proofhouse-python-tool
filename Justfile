@@ -304,12 +304,13 @@ lint-reuse:
 # changelog, vale's own style packages, scratch dirs, the gitignored
 # agent worktrees under .claude/worktrees/, the COMMIT_AGENTMSG draft
 # (the `lint-commit-msg` recipe owns that one under the stricter
-# commit scope), the gitignored apm_modules/ package cache, the
+# commit scope), the gitignored apm_modules/ package cache and the
+# rules and skills the same APM package deploys under .claude/, the
 # virtualenv, build output, and the pytest and complexipy caches
 # (each carries a generated README); the per-file-type rules in
 # .vale.ini decide what else gets inspected.
 lint-prose *args:
-    vale --output=proofhouse-agent.tmpl --glob='!{LICENSE,CHANGELOG.md,.vale/*,tmp/*,apm_modules/*,.claude/worktrees/*,COMMIT_AGENTMSG,.venv/*,dist/*,.pytest_cache/*,.complexipy_cache/*}' {{ if args == "" { "." } else { args } }}
+    vale --output=proofhouse-agent.tmpl --glob='!{LICENSE,CHANGELOG.md,.vale/*,tmp/*,apm_modules/*,.claude/rules/*,.claude/skills/*,.claude/worktrees/*,COMMIT_AGENTMSG,.venv/*,dist/*,.pytest_cache/*,.complexipy_cache/*}' {{ if args == "" { "." } else { args } }}
 
 # Check spelling across the tree against the project dictionary at
 # .cspell-words.txt. cspell ignores binaries, generated files, and the
