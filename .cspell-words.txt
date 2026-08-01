@@ -30,6 +30,7 @@ hypofuzz
 importlinter
 killpg
 ldflags
+linuxbrew
 lockfiles
 matrixed
 mutscope

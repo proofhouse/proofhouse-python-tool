@@ -28,7 +28,7 @@ def invoke(args: Sequence[str]) -> Result:
     return runner().invoke(app, args)
 
 
-# Each build-stamp field spans one line of free text: the version comes
+# Each build-stamp field spans one line of free text. The version comes
 # from distribution metadata, the commit and date from the generated
 # stamp module. Dropping the newline and carriage return keeps a drawn
 # value on a single output line, which the version command's three-line

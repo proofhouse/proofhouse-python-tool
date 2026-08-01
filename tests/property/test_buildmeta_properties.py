@@ -20,8 +20,8 @@ from proofhouse_python_tool import buildmeta, testing
 
 _STAMP_MODULE = "proofhouse_python_tool._buildstamp"
 
-# The three-line version block: the distribution name and version, then
-# the commit and date under aligned prefixes. The commit line tolerates
+# The three-line version block prints the distribution name and version,
+# then the commit and date under aligned prefixes. The commit line tolerates
 # a blank value (an unstamped checkout). The version and date never run
 # blank.
 _VERSION_SHAPE = (
