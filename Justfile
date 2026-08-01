@@ -67,6 +67,12 @@ actionlint_image := "docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f
 # evaluate at recipe-run time, not Justfile-parse time.
 actionlint := 'DOCKER_CONFIG="$(mktemp -d)" PATH="$(dirname ' + container_runtime + '):$PATH" ' + container_runtime + ' run --rm -v "$(pwd):/repo:ro" -w /repo ' + actionlint_image
 
+# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
+
+gitleaks_version := "v8.28.0"
+gitleaks_image := "ghcr.io/gitleaks/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854"
+gitleaks_scan := 'DOCKER_CONFIG="$(mktemp -d)" PATH="$(dirname ' + container_runtime + '):$PATH" ' + container_runtime + ' run --rm -v "$(pwd):/repo" -w /repo ' + gitleaks_image
+
 # Build metadata. `date` is the *committer date* (UTC, ISO-8601),
 # not build invocation time, so two builds of the same commit produce
 # identical artifacts. `source_date_epoch` exports the same instant as
@@ -608,8 +614,9 @@ fuzz:
 # an early commit and was later deleted still surfaces — a plain scan
 # of the checked-out files would miss it. `--verbose` prints the file,
 # line, commit, and rule behind each hit, enough to locate the leak
-# without a second run. Brew provisions the binary (see Brewfile), and
-# `brew upgrade gitleaks` advances the detector set with upstream.
+# without a second run. The scan runs from a digest-pinned image, so
+# every machine reads the same detector set, and Renovate proposes the
+# version and digest bumps that advance it with upstream.
 #
 # This gate is deliberately local-only: no ci.yml job mirrors it.
 # GitHub's own secret scanning with push protection guards the remote
@@ -617,7 +624,7 @@ fuzz:
 # CI re-scan would duplicate a check the platform already enforces
 # before the commit ever reaches a pull request.
 gitleaks:
-    gitleaks git --verbose .
+    {{ gitleaks_scan }} git --verbose .
 
 # Audit the locked dependency closure for known vulnerabilities. The
 # scan runs against an exported PEP 751 lockfile rather than the live
