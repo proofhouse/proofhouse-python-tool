@@ -17,6 +17,7 @@ dunder
 dupl
 EDITMSG
 getpgid
+GHSA
 gocognit
 goheader
 golangci
