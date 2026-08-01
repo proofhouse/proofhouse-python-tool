@@ -36,6 +36,16 @@ container_runtime := env("CONTAINER_RUNTIME", `bash -c '
 
 # editorconfig-checker-enable
 
+# Shared container-run prefix. DOCKER_CONFIG points at a fresh empty
+# directory so docker skips the osxkeychain credential helper (public
+# Docker Hub pulls don't need it, and sandboxed environments can't
+# always reach the helper binary). PATH gets the runtime's directory
+# prepended for cases where docker itself isn't on the calling shell's
+# PATH. Shell substitutions evaluate at recipe-run time, not
+# Justfile-parse time.
+
+docker_run := 'DOCKER_CONFIG="$(mktemp -d)" PATH="$(dirname ' + container_runtime + '):$PATH" ' + container_runtime + ' run --rm'
+
 # actionlint version pin. The upstream image bundles actionlint (and
 # the shellcheck it shells out to) at a known version, and actionlint
 # has no PyPI distribution for the dev dependency group to carry, so
@@ -58,20 +68,13 @@ actionlint_image := "docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f
 
 # actionlint invocation. Mounts the repo read-only at /repo with -w /repo
 # so actionlint finds .github/workflows/ and .github/actionlint.yaml.
-#
-# DOCKER_CONFIG points at a fresh empty directory so docker skips the
-# osxkeychain credential helper (public Docker Hub pulls don't need it,
-# and sandboxed environments can't always reach the helper binary).
-# PATH gets the runtime's directory prepended for cases where docker
-# itself isn't on the calling shell's PATH. Shell substitutions
-# evaluate at recipe-run time, not Justfile-parse time.
-actionlint := 'DOCKER_CONFIG="$(mktemp -d)" PATH="$(dirname ' + container_runtime + '):$PATH" ' + container_runtime + ' run --rm -v "$(pwd):/repo:ro" -w /repo ' + actionlint_image
+actionlint := docker_run + ' -v "$(pwd):/repo:ro" -w /repo ' + actionlint_image
 
 # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
 
 gitleaks_version := "v8.28.0"
 gitleaks_image := "ghcr.io/gitleaks/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854"
-gitleaks_scan := 'DOCKER_CONFIG="$(mktemp -d)" PATH="$(dirname ' + container_runtime + '):$PATH" ' + container_runtime + ' run --rm -v "$(pwd):/repo" -w /repo ' + gitleaks_image
+gitleaks_scan := docker_run + ' -v "$(pwd):/repo" -w /repo ' + gitleaks_image
 
 # Build metadata. `date` is the *committer date* (UTC, ISO-8601),
 # not build invocation time, so two builds of the same commit produce
