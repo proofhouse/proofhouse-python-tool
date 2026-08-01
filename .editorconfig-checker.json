@@ -1,0 +1,8 @@
+{
+  "Exclude": [
+    "^\\.vale/(Google|write-good|proselint|ai-tells.*)/",
+    "^\\.venv/",
+    "^dist/",
+    "^CHANGELOG\\.md$"
+  ]
+}
