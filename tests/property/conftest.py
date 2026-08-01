@@ -13,8 +13,8 @@ import os
 
 from hypothesis import settings
 
-# The inner-loop profile: enough examples to surface an obvious
-# counterexample fast, few enough to keep `just test` snappy.
+# The inner-loop profile draws enough examples to surface an obvious
+# counterexample fast, and few enough to keep `just test` snappy.
 settings.register_profile("dev", max_examples=50)
 
 # The CI profile draws ten times as many examples under no per-example
