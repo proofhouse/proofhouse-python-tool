@@ -102,10 +102,7 @@ default: test
 # re-installs the git hooks.
 
 # Set up the development environment.
-setup:
-    just install-brew
-    just install-tools
-    just prek-install
+setup: install-brew install-tools prek-install
 
 # Install Homebrew dependencies from Brewfile.
 install-brew:
